@@ -250,6 +250,21 @@ body::before {
   animation: eq 0.9s ease-in-out infinite alternate;
 }
 
+/* --- Cura thinking: three raised dots --- */
+@keyframes think-dot {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  35% { transform: translateY(-4px); opacity: 1; }
+}
+.a-think-dot {
+  display: inline-block;
+  animation: think-dot 1.15s ease-in-out infinite;
+}
+
+/* --- Cura in conversation: quick friendly wobble when thinking --- */
+.a-chat-bird-thinking {
+  animation: bob 1.6s ease-in-out infinite;
+}
+
 /* --- Perched mascot: gentle bob --- */
 @keyframes bob {
   0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -294,6 +309,7 @@ body::before {
     transform: none !important;
   }
   .a-breathe, .a-ripple, .a-wobble, .a-glow, .a-eq, .a-wash, .a-ring, .a-stamp,
+  .a-think-dot, .a-chat-bird-thinking,
   .drift-a, .drift-b, .drift-c, .drift-d {
     animation: none !important;
   }

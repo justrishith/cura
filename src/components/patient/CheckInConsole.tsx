@@ -6,19 +6,23 @@ import { useEffect, useRef, useState } from "react";
 import { ActionCard } from "@/components/ui/ActionCard";
 import { CallStrip } from "@/components/ui/CallStrip";
 import { CrisisBanner } from "@/components/ui/CrisisBanner";
+import { CuraBird } from "@/components/ui/CuraBird";
 import { CuraMark } from "@/components/ui/CuraMark";
 import { GradeBadge } from "@/components/ui/GradeBadge";
 import { MicOrb, type MicOrbState } from "@/components/ui/MicOrb";
-import { TranscriptFeed, type TranscriptBubbleProps } from "@/components/ui/TranscriptBubble";
+import { TranscriptFeed, TranscriptThinking, type TranscriptBubbleProps } from "@/components/ui/TranscriptBubble";
 import { useUserSpeech } from "@/lib/use-user-speech";
 import type { ActionReceipt, AgentTurnResult, CallOffer, Grade } from "@/lib/types";
 
 const DEMO_HOUSEHOLD_ID = "11111111-1111-1111-1111-111111111111";
 const WAIT_NOTE = "awaiting call outcome…";
+const CURA_PHONE = "(567) 405-1070";
+const CURA_PHONE_TEL = "tel:+15674051070";
+// Elderly-first sizing: generous targets the thumb never misses.
 const INPUT_CLASS =
-  "r-ctl min-h-12 w-full border border-hairline bg-paper px-4 text-base text-ink placeholder:text-inkmuted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand";
+  "r-ctl min-h-16 w-full border border-hairline bg-paper px-4 text-lg text-ink placeholder:text-inkmuted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand";
 const SEND_CLASS =
-  "r-ctl min-h-12 bg-moss px-5 text-sm font-semibold text-paper transition-[background-color,transform] duration-[240ms] ease-out hover:bg-mosshover active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand";
+  "r-ctl min-h-16 bg-moss px-6 text-lg font-semibold text-paper transition-[background-color,transform] duration-[240ms] ease-out hover:bg-mosshover active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand";
 
 type CallFlow =
   | { kind: "offer"; offer: CallOffer } | { kind: "live"; provider: string; sid: string }
@@ -166,14 +170,37 @@ export default function CheckInConsole() {
           </div>
           {grade && <GradeBadge grade={grade} size="md" />}
         </div>
+        {/* Phone card — visible from the first screen, no check-in required. */}
+        <section
+          aria-label="Talk to Cura on the phone"
+          className="r-sheet border border-hairline bg-paper p-4"
+        >
+          <div className="flex items-start gap-3">
+            <CuraBird className="a-bob h-11 w-11 shrink-0" title="Cura, the little songbird" />
+            <div className="flex-1">
+              <p className="text-lg font-semibold leading-snug text-ink">Prefer to just talk?</p>
+              <p className="mt-0.5 text-sm text-inkmuted">
+                Cura listens, talks back, and books your appointments — with a real phone call, first thing each day.
+              </p>
+              <a
+                href={CURA_PHONE_TEL}
+                className="r-ctl mt-3 inline-flex min-h-14 items-center justify-center gap-2 bg-clay px-5 text-base font-semibold text-paper transition-transform duration-[240ms] ease-out hover:brightness-90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-sand"
+              >
+                <span aria-hidden="true">📞</span> Call Cura — {CURA_PHONE}
+              </a>
+              <p className="mt-1.5 text-xs text-inkmuted/70">What she books shows up on your caregiver&apos;s dashboard.</p>
+            </div>
+          </div>
+        </section>
         <MicOrb state={orb} onToggle={onOrbToggle} onSwitchToText={() => setTextMode((v) => !v)} />
         {feed.length === 0 ? (
-          <p className="r-sheet border border-hairline bg-paper px-4 py-3 text-base leading-relaxed text-inkmuted">
-            Tap the orb and say how you&apos;re doing — or switch to text below.
+          <p className="r-sheet border border-hairline bg-paper px-4 py-3 text-lg leading-relaxed text-inkmuted">
+            Tap the circle and tell Cura how you&apos;re doing today.
           </p>
         ) : (
           <TranscriptFeed items={feed} />
         )}
+        {orb === "thinking" && <TranscriptThinking />}
         {orb === "listening" && interim && <p aria-live="polite" className="text-sm italic text-inkmuted/70">…{interim}</p>}
         {receipts.length > 0 && (
           <section aria-label="What Cura did for you" className="flex flex-col gap-3">{receipts.map((r, i) => <ActionCard key={r.id} receipt={r} delay={i * 70} />)}</section>

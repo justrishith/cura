@@ -11,7 +11,9 @@ export type ToolName =
   | "notify_caregiver"
   | "crisis_alert"
   | "schedule_telephone_call"
-  | "finalize_checkin";
+  | "log_med_taken"
+  | "finalize_checkin"
+  | "suggest_health_tip";
 
 export type ToolStatus = "succeeded" | "scheduled" | "failed";
 

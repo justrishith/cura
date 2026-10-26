@@ -11,6 +11,7 @@ import type {
 } from "./types";
 import { getStore } from "./store";
 import { fireOutboundCall } from "./telephony";
+import { HEALTH_TIPS, tipPhraseFor, type HealthTipKind } from "./health-tips";
 
 /** What the model proposes: a tool call parsed from an Interactions step. */
 export interface ProposedCall {
@@ -90,6 +91,27 @@ export async function executeProposedCall(
       });
     }
 
+    case "log_med_taken": {
+      const medName = str(call.args.med_name);
+      const taken = call.args.taken === true;
+      const note = str(call.args.note) || undefined;
+      const meds = await store.getMedications(ctx.householdId);
+      const needle = medName.toLowerCase();
+      const matched = meds.find((m) => m.name.toLowerCase().includes(needle)) ?? meds[0] ?? null;
+      const matchedId = matched ? matched.id : "unknown";
+      return store.addAction({
+        checkinId: ctx.checkin.id,
+        tool: "log_med_taken",
+        status: "succeeded" as ToolStatus,
+        payload: {
+          med_name: medName,
+          taken,
+          note: note ?? undefined,
+          matched_id: matchedId,
+        },
+      });
+    }
+
     case "request_refill": {
       const meds = await store.getMedications(ctx.householdId);
       const needle = str(call.args.med_name).toLowerCase();
@@ -147,7 +169,9 @@ export async function executeProposedCall(
 
     case "notify_caregiver": {
       const level = str(call.args.level) === "info" ? "info" : "urgent";
-      const message = str(call.args.message) || `${ctx.patientName} needs attention.`;
+      const message =
+        (str(call.args.message) || `${ctx.patientName} needs attention.`) +
+        " To speak with Cura about her now, call (567) 405-1070.";
       await store.createNotification({
         householdId: ctx.householdId,
         checkinId: ctx.checkin.id,
@@ -195,6 +219,17 @@ export async function executeProposedCall(
       return null;
     }
 
+    case "suggest_health_tip": {
+      const kind = str(call.args.kind) as HealthTipKind;
+      // Phrase is always the FIXED server-side text — never model-composed advice
+      const phrase = tipPhraseFor(kind) ?? HEALTH_TIPS[0].phrase;
+      return store.addAction({
+        checkinId: ctx.checkin.id,
+        tool: "suggest_health_tip",
+        payload: { kind, phrase },
+      });
+    }
+
     default:
       return null;
   }
@@ -217,7 +252,7 @@ export async function ensureTierReceipts(
           name: "notify_caregiver",
           args: {
             level: "urgent",
-            message: `${ctx.patientName}'s check-in was graded urgent — please check in on her.`,
+            message: `${ctx.patientName}'s check-in was graded urgent — please check in on her. To speak with Cura about her now, call (567) 405-1070.`,
           },
         },
         ctx
@@ -240,7 +275,7 @@ export async function runCrisisPath(
   const receipts: ActionReceipt[] = [];
   await store.updateCheckin(ctx.checkin.id, { grade: "crisis" });
   const alert = await executeProposedCall(
-    { name: "crisis_alert", args: { concern, message: `Possible ${concern}. Immediate attention requested.` } },
+    { name: "crisis_alert", args: { concern, message: `Possible ${concern}. Immediate attention requested. To speak with Cura about her now, call (567) 405-1070. If this is an emergency, call 911.` } },
     ctx
   );
   if (alert) receipts.push(alert);
@@ -271,6 +306,20 @@ export const CURA_TOOLS: unknown[] = [
     name: "check_meds",
     description: "List the patient's medications and their current refill statuses.",
     parameters: { type: "object", properties: {}, required: [] },
+  },
+  {
+    type: "function",
+    name: "log_med_taken",
+    description: "Record that the patient took (or skipped) a medication during this check-in.",
+    parameters: {
+      type: "object",
+      properties: {
+        med_name: { type: "string", description: "Medication name, e.g. Metformin" },
+        taken: { type: "boolean", description: "true if she took it, false if skipped" },
+        note: { type: "string", description: "Optional note about how it went" },
+      },
+      required: ["med_name", "taken"],
+    },
   },
   {
     type: "function",
@@ -320,6 +369,22 @@ export const CURA_TOOLS: unknown[] = [
         message: { type: "string", description: "What she reported, briefly" },
       },
       required: ["concern"],
+    },
+  },
+  {
+    type: "function",
+    name: "suggest_health_tip",
+    description: "Offer one safe, fixed encouragement from Cura's own list — movement, hydration, light, or rest. The phrase is always fixed server-side; never improvise medical advice.",
+    parameters: {
+      type: "object",
+      properties: {
+        kind: {
+          type: "string",
+          enum: ["movement", "hydration", "light", "rest"],
+          description: "Category of nudge to offer",
+        },
+      },
+      required: ["kind"],
     },
   },
   {

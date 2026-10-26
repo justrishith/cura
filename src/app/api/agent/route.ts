@@ -22,6 +22,7 @@ import {
   runCrisisPath,
   type ProposedCall,
 } from "@/lib/tools";
+import { buildPatientBrief } from "@/lib/patient-brain";
 import type { AgentTurnInput, AgentTurnResult, CallOffer, Grade, Medication, Appointment } from "@/lib/types";
 
 const PATIENT_NAME = "Maria";
@@ -35,7 +36,12 @@ function flattenThread(thread: { role: string; text: string }[]): string {
     .join("\n");
 }
 
-function buildSystemPrompt(householdName: string, meds: Medication[], openSlots: Appointment[]): string {
+function buildSystemPrompt(
+  householdName: string,
+  meds: Medication[],
+  openSlots: Appointment[],
+  brief?: { forPrompt: string }
+): string {
   const medsLine = meds
     .map((m) => `${m.name} — ${m.dosage ?? ""} (refill: ${m.refillStatus})`)
     .join("; ");
@@ -52,10 +58,13 @@ function buildSystemPrompt(householdName: string, meds: Medication[], openSlots:
     `- Never say "that's probably fine". If something could be serious, escalate.`,
     `- If she mentions emergency symptoms, stay calm and say you've alerted her caregiver and read the on-screen banner about calling 911.`,
     `TOOLS: use them freely. Always call log_symptom for anything she reports. Always call submit_checkin_grade before finishing your final reply (grade: low = routine wellbeing, medium = light action needed soon, high = needs doctor-level attention today).`,
+    `For routine (low-grade) check-ins, end with exactly one suggest_health_tip call; never on crisis; never for symptom-urgent.`,
     `If she says she ran out of medication or is low on pills, use request_refill.`,
+    `When she mentions her pills (took them, skipped, feels odd about them), call check_meds once, then log_med_taken.`,
     `When her grade is HIGH (or she needs a doctor soon): DO NOT call book_appointment yourself on the first turn. Instead offer THIS: "Want me to call Dr. Chen's office right now and get you on the calendar?" — the on-screen call button will handle dialing when she agrees, so never say you are dialing yet. Only web-book if she refuses the call but still wants an appointment. Always notify_caregiver urgently on the same turn you offered. Never re-book if an appointment exists.`,
     `HER MEDS: ${medsLine}`,
     `OPEN SLOTS: ${slots || "none today"}`,
+    brief?.forPrompt ? `WHAT YOU REMEMBER ABOUT HER: ${brief.forPrompt}` : "",
   ].join("\n");
 }
 
@@ -91,6 +100,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!checkin) checkin = await store.createCheckin({ householdId });
     const ctx = { householdId, checkin, patientName: PATIENT_NAME };
 
+    // Inject patient brain brief into the system prompt
+    const brief = await buildPatientBrief(store, householdId, PATIENT_NAME);
+
     // 1) persist the patient's turn
     const thread = [...checkin.thread, { role: "patient" as const, text: message }];
     await store.updateCheckin(checkin.id, { thread });
@@ -117,7 +129,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const systemInstruction = buildSystemPrompt(
         household.name,
         await store.getMedications(householdId),
-        await store.getOpenAppointments(householdId)
+        await store.getOpenAppointments(householdId),
+        brief
       );
       let interaction = null;
       let prevId: string | null = checkin.interactionId ?? null;
@@ -167,7 +180,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     await store.updateCheckin(checkin.id, { thread: finalThread, summaryText: reply });
 
     const callOffer: CallOffer | null =
-      grade === "high" && !crisisFired
+      (grade === "high" || grade === "medium") && !crisisFired
         ? { type: "clinic_booking", provider: "Dr. Chen's office" }
         : null;
 

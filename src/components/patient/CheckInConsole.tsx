@@ -114,7 +114,9 @@ export default function CheckInConsole() {
   /** The one-tap session start: gesture grants the mic, Cura speaks the greeting, then listens. */
   function beginSession() {
     setSessionStarted(true);
-    const greeting = `Hello! I'm Cura, your daily care bird. How are you feeling today — anything bothering you?`;
+    const h = new Date().getHours();
+    const part = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
+    const greeting = `Good ${part}, Maria. I'm Cura, your daily care bird. How are you feeling today — anything bothering you?`;
     push("cura", greeting);
     if (!isSupported) {
       setTextMode(true);

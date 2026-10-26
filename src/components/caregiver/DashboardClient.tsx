@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { CaregiverSnapshot } from "@/app/api/caregiver/route";
 import { CuraMark } from "@/components/ui/CuraMark";
+import { CuraBird } from "@/components/ui/CuraBird";
 import { AlertRow, StatusHero } from "@/components/ui/DashboardPrimitives";
 import { DashboardPanels, type DashboardTab } from "./DashboardPanels";
 
@@ -117,6 +118,33 @@ export function DashboardClient() {
                 try the patient console
               </Link>
               .
+            </section>
+          )}
+
+          {data?.brainCard && (
+            <section aria-label="Cura's understanding" className="a-drop d-3 r-sheet border border-hairline bg-paper p-4 md:p-6">
+              <div className="flex items-start gap-3">
+                <CuraBird title="Cura's understanding of Maria" className="h-9 w-9 shrink-0" />
+                <div className="min-w-0">
+                  <h2 className="text-xs font-bold uppercase tracking-wide text-clay">Cura's understanding of Maria</h2>
+                  <div className="mt-2 flex flex-wrap items-baseline gap-3 text-sm">
+                    <span className="text-inkmuted">total check-ins</span>
+                    <span className="font-semibold">{data.brainCard.totalCheckins}</span>
+                    <span className="text-xs text-inkmuted">
+                      {data.brainCard.energyTrend === "up"
+                        ? "↑ increasing"
+                        : data.brainCard.energyTrend === "down"
+                          ? "↓ decreasing"
+                          : "→ stable"}
+                    </span>
+                  </div>
+                  {data.brainCard.learnedLines.length > 0 && (
+                    <div className="mt-1 truncate text-xs text-inkmuted" title={data.brainCard.learnedLines.slice(0, 3).join(" · ")}>
+                      {data.brainCard.learnedLines.slice(0, 3).join(" · ")}
+                    </div>
+                  )}
+                </div>
+              </div>
             </section>
           )}
 

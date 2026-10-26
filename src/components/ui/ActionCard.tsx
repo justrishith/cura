@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   CheckCircle2,
   FileText,
+  HeartHandshake,
   ListChecks,
   Phone,
   Pill,
@@ -54,6 +55,18 @@ function copyFor(receipt: ActionReceipt): CardCopy {
         border: "border-l-moss",
         chip: "bg-oksoft text-ok",
       };
+    case "log_med_taken": {
+      const taken = payload.taken === true;
+      const medNameStr = stringPayload(payload, "med_name") ?? "medication";
+      return {
+        title: taken ? `Medication logged — ${medNameStr} ✓ taken` : `Medication skipped — ${medNameStr}`,
+        slot: null,
+        message: stringPayload(payload, "note"),
+        Icon: Pill,
+        border: taken ? "border-l-moss" : "border-l-warn",
+        chip: taken ? "bg-oksoft text-ok" : "bg-warnsoft text-warn",
+      };
+    }
     case "request_refill":
       return {
         title: `Refill requested — ${stringPayload(payload, "medication_name") ?? "medication"}`,
@@ -116,6 +129,15 @@ function copyFor(receipt: ActionReceipt): CardCopy {
         Icon: CheckCircle2,
         border: "border-l-stone",
         chip: "bg-muted text-inkmuted",
+      };
+    case "suggest_health_tip":
+      return {
+        title: stringPayload(payload, "phrase") ?? "A little encouragement for today",
+        slot: null,
+        message: null,
+        Icon: HeartHandshake,
+        border: "border-l-ok",
+        chip: "bg-oksoft text-ok",
       };
   }
 }

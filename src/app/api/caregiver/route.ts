@@ -11,6 +11,7 @@ import type {
   Medication,
 } from "@/lib/types";
 import { getStore, DEMO_HOUSEHOLD_ID } from "@/lib/store";
+import { getBrainSummaryForCard, type BrainCard } from "@/lib/patient-brain";
 
 export interface CheckinWithActions extends Checkin {
   actions: ActionReceipt[];
@@ -25,6 +26,7 @@ export interface CaregiverSnapshot {
   notifications: CaregiverNotification[];
   calls: CallRecord[];
   appointments: Appointment[];
+  brainCard?: BrainCard;
 }
 
 /** Caregiver surface fetch: every list the dashboard renders, in one round trip. */
@@ -52,6 +54,7 @@ export async function GET(req: Request) {
   const notifications = await store.getNotifications(householdId);
   const calls = await store.getCallLog(householdId);
   const appointments = await store.getAppointments(householdId);
+  const brainSummary = await getBrainSummaryForCard(store, householdId, patientName);
 
   const snapshot: CaregiverSnapshot = {
     householdId,
@@ -61,6 +64,7 @@ export async function GET(req: Request) {
     notifications,
     calls,
     appointments,
+    brainCard: brainSummary,
   };
   return NextResponse.json(snapshot);
 }

@@ -9,7 +9,9 @@ export type ToolName =
   | "request_refill"
   | "book_appointment"
   | "notify_caregiver"
-  | "crisis_alert";
+  | "crisis_alert"
+  | "schedule_telephone_call"
+  | "finalize_checkin";
 
 export type ToolStatus = "succeeded" | "scheduled" | "failed";
 

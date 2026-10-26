@@ -26,6 +26,15 @@ import type { AgentTurnInput, AgentTurnResult, CallOffer, Grade, Medication, App
 
 const PATIENT_NAME = "Maria";
 
+/** Cold-start-safe turn input: flattened recent thread so a lost interaction
+ *  chain (serverless restart) still gives the model full context. */
+function flattenThread(thread: { role: string; text: string }[]): string {
+  return thread
+    .slice(-8)
+    .map((t) => `${t.role === "patient" ? "Patient" : "Cura"}: ${t.text}`)
+    .join("\n");
+}
+
 function buildSystemPrompt(householdName: string, meds: Medication[], openSlots: Appointment[]): string {
   const medsLine = meds
     .map((m) => `${m.name} — ${m.dosage ?? ""} (refill: ${m.refillStatus})`)
@@ -116,7 +125,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
       for (let iteration = 0; iteration < 3; iteration += 1) {
         interaction = await createInteraction({
-          input: iteration === 0 ? message : pendingResults,
+          input: iteration === 0 ? flattenThread(thread) : pendingResults,
           tools: CURA_TOOLS,
           systemInstruction,
           previousId: prevId,

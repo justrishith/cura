@@ -57,9 +57,9 @@ export function buildOpeningTwiml(
     // action must be an absolute URL when Twilio opens this TwiML via the Twiml or
     // Url parameter — the Gather hands the caller's speech to /api/telephony/turn.
     const action = turnUrl ? ` action="${escXml(turnUrl)}" actionOnEmptyResult="true"` : "";
-    return `<Response><Say>${escXml(say)}</Say><Gather input="speech" speechTimeout="auto" language="en-US"${action}><Say>What's the earliest appointment you have for her?</Say></Gather></Response>`;
+    return `<Response><Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">${escXml(say)}</Say><Gather input="speech" speechTimeout="auto" language="en-US"${action}><Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">What's the earliest appointment you have for her?</Say></Gather></Response>`;
   }
-  return `<Response><Say>${escXml(say)}</Say><Hangup/></Response>`;
+  return `<Response><Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">${escXml(say)}</Say><Hangup/></Response>`;
 }
 
 /**

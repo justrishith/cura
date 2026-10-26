@@ -45,7 +45,7 @@ function gatherBlock(speech: string, action: string): string {
   return (
     `<Gather input="speech dtmf" speechTimeout="auto" timeout="8" ` +
     `actionOnEmptyResult="true" method="POST" action="${xmlEscape(action)}">` +
-    `<Say>${xmlEscape(speech)}</Say></Gather>`
+    `<Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">${xmlEscape(speech)}</Say></Gather>`
   );
 }
 
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
 
   if (turn.done) {
     await store.updateCallStatus(callSid, "completed");
-    return twimlResponse(wrapResponse(`<Say>${xmlEscape(turn.reply)}</Say><Hangup/>`));
+    return twimlResponse(wrapResponse(`<Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">${xmlEscape(turn.reply)}</Say><Hangup/>`));
   }
   return twimlResponse(wrapResponse(gatherBlock(turn.reply, action)));
 }

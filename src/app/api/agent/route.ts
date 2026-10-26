@@ -53,7 +53,7 @@ function buildSystemPrompt(householdName: string, meds: Medication[], openSlots:
     `- If she mentions emergency symptoms, stay calm and say you've alerted her caregiver and read the on-screen banner about calling 911.`,
     `TOOLS: use them freely. Always call log_symptom for anything she reports. Always call submit_checkin_grade before finishing your final reply (grade: low = routine wellbeing, medium = light action needed soon, high = needs doctor-level attention today).`,
     `If she says she ran out of medication or is low on pills, use request_refill.`,
-    `If the grade is high or medium and relevant, book_appointment and/or notify_caregiver.`,
+    `When her grade is HIGH (or she needs a doctor soon): DO NOT call book_appointment yourself on the first turn. Instead offer THIS: "Want me to call Dr. Chen's office right now and get you on the calendar?" — the on-screen call button will handle dialing when she agrees, so never say you are dialing yet. Only web-book if she refuses the call but still wants an appointment. Always notify_caregiver urgently on the same turn you offered. Never re-book if an appointment exists.`,
     `HER MEDS: ${medsLine}`,
     `OPEN SLOTS: ${slots || "none today"}`,
   ].join("\n");

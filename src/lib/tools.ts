@@ -161,14 +161,21 @@ export async function executeProposedCall(
         level: "crisis",
         message: str(call.args.message) || `Emergency concern reported: ${str(call.args.concern)}`,
       });
-      await fireOutboundCall("crisis_outreach", ctx.householdId, {
+      // Record what actually happened at Twilio — never a placebo "fired".
+      const callResult = await fireOutboundCall("crisis_outreach", ctx.householdId, {
         patientName: ctx.patientName,
         concern: str(call.args.concern),
       });
       return store.addAction({
         checkinId: ctx.checkin.id,
         tool: "crisis_alert",
-        payload: { concern: str(call.args.concern), outreach: "fired" },
+        payload: {
+          concern: str(call.args.concern),
+          outreach: callResult.fired ? "fired" : "not_fired",
+          ...(callResult.providerSid ? { provider_call_sid: callResult.providerSid } : {}),
+          ...(callResult.mode ? { mode: callResult.mode } : {}),
+          ...(callResult.reason ? { reason: callResult.reason } : {}),
+        },
       });
     }
 

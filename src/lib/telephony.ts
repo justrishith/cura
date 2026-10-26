@@ -16,7 +16,7 @@ export interface FireCallResult {
   providerSid?: string;
   reason?: string;
   /** True when the call was attempted via Url-mode (trial accounts can't pass Twiml). */
-  mode?: "twiml" | "url";
+  mode?: "twiml" | "url" | "template";
 }
 
 export function telephonyConfigured(): boolean {
@@ -98,7 +98,7 @@ export async function fireOutboundCall(
       ? `${publicBase}/api/telephony/turn?purpose=${encodeURIComponent(purpose)}`
       : null;
 
-    const createCall = async (mode: "twiml" | "url") => {
+    const createCall = async (mode: "twiml" | "url" | "template") => {
       const body =
         mode === "twiml"
           ? new URLSearchParams({
@@ -106,12 +106,21 @@ export async function fireOutboundCall(
               From: from,
               Twiml: buildOpeningTwiml(purpose, patientName, concern, turnUrl),
             })
-          : // Trial accounts reject the Twiml parameter ("limited parameter access").
-            // Url mode is trial-legal: Twilio fetches our webhook, which serves the
-            // same opening greeting on the initial no-SpeechResult request.
-            turnUrl
-            ? new URLSearchParams({ To: to, From: from, Url: turnUrl })
-            : null;
+          : mode === "template"
+            ? // Trial-legal opening move (docs/usage/trials/try-out-voice): the call
+              // must start from one of Twilio's four hosted Voice Templates. The
+              // template speaks its canned demo text; parameter names for injecting
+              // Cura's script are TBD (console Start-a-call request shows them).
+              new URLSearchParams({
+                To: to,
+                Url: "https://webhooks.twilio.com/v1/Voice/Template/voice_text_to_speech",
+                ...(turnUrl
+                  ? { StatusCallback: `${publicBase}/api/telephony/status`, StatusCallbackMethod: "POST" }
+                  : {}),
+              })
+            : turnUrl
+              ? new URLSearchParams({ To: to, From: from, Url: turnUrl })
+              : null;
       if (!body) return { status: 0, json: {} as Record<string, unknown> };
 
       const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
@@ -127,11 +136,18 @@ export async function fireOutboundCall(
 
     // Attempt 1: Twiml param (works on paid accounts; self-hosted, no public URL needed).
     let { status, json } = await createCall("twiml");
-    let mode: "twiml" | "url" = "twiml";
+    let mode: "twiml" | "url" | "template" = "twiml";
 
-    // Trial fallback: Twiml is parameter-blocked on trials → switch to Url mode
-    // once before giving up. Requires PUBLIC_BASE_URL (Vercel deploy) to exist.
-    if (status === 400 && turnUrl) {
+    // Fallback 2: trial accounts reject the Twiml parameter → use the hosted
+    // template (phone rings for real; opening text is Twilio's canned demo).
+    if (status !== 200 && status !== 201) {
+      const attempt = await createCall("template");
+      ({ status, json } = attempt);
+      mode = "template";
+    }
+
+    // Fallback 3: own-webhook Url mode — the paid-account path for a public deploy.
+    if (status !== 200 && status !== 201 && turnUrl) {
       const attempt = await createCall("url");
       ({ status, json } = attempt);
       mode = "url";

@@ -16,8 +16,6 @@ import type { ActionReceipt, AgentTurnResult, CallOffer, Grade } from "@/lib/typ
 
 const DEMO_HOUSEHOLD_ID = "11111111-1111-1111-1111-111111111111";
 const WAIT_NOTE = "awaiting call outcome…";
-const CURA_PHONE = "(567) 405-1070";
-const CURA_PHONE_TEL = "tel:+15674051070";
 // Elderly-first sizing: generous targets the thumb never misses.
 const INPUT_CLASS =
   "r-ctl min-h-16 w-full border border-hairline bg-paper px-4 text-lg text-ink placeholder:text-inkmuted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand";
@@ -199,28 +197,8 @@ export default function CheckInConsole() {
           </div>
           {grade && <GradeBadge grade={grade} size="md" />}
         </div>
-        {/* Phone card — visible from the first screen, no check-in required. */}
-        <section
-          aria-label="Talk to Cura on the phone"
-          className="r-sheet border border-hairline bg-paper p-4"
-        >
-          <div className="flex items-start gap-3">
-            <CuraBird className="a-bob h-11 w-11 shrink-0" title="Cura, the little songbird" />
-            <div className="flex-1">
-              <p className="text-lg font-semibold leading-snug text-ink">Prefer to just talk?</p>
-              <p className="mt-0.5 text-sm text-inkmuted">
-                Cura listens, talks back, and books your appointments — with a real phone call, first thing each day.
-              </p>
-              <a
-                href={CURA_PHONE_TEL}
-                className="r-ctl mt-3 inline-flex min-h-14 items-center justify-center gap-2 bg-clay px-5 text-base font-semibold text-paper transition-transform duration-[240ms] ease-out hover:brightness-90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-sand"
-              >
-                <span aria-hidden="true">📞</span> Call Cura — {CURA_PHONE}
-              </a>
-              <p className="mt-1.5 text-xs text-inkmuted/70">What she books shows up on your caregiver&apos;s dashboard.</p>
-            </div>
-          </div>
-        </section>
+        {/* Crisis speaks for the phone: when it matters, Cura calls the caregiver
+            automatically — no button, no number, nothing to learn. */}
         {sessionStarted ? (
           <>
             <MicOrb state={orb} onToggle={onOrbToggle} onSwitchToText={() => setTextMode((v) => !v)} />

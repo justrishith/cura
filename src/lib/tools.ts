@@ -105,6 +105,13 @@ export async function executeProposedCall(
         });
       }
       await store.setRefillStatus(med.id, "requested");
+      const existing = (await store.getActionsForCheckin(ctx.checkin.id)).find(
+        (a) => a.tool === "request_refill" && a.payload.med === med.name
+      );
+      if (existing) {
+        // idempotent: asking twice per check-in shouldn't double-book the pharmacy
+        return existing;
+      }
       return store.addAction({
         checkinId: ctx.checkin.id,
         tool: "request_refill",

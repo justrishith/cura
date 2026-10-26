@@ -3,6 +3,7 @@
 //   SupabaseStore (wired keys): Postgres via service-role client (added when keys land)
 // Server-only; route handlers call getStore().
 
+import { SupabaseStore } from "./store-supabase";
 import type {
   ActionReceipt,
   Appointment,
@@ -314,12 +315,13 @@ export function isDemoMode(): boolean {
 }
 
 let mockSingleton: MockStore | null = null;
+let supabaseSingleton: SupabaseStore | null = null;
 
 const EXPORTED_DEMO_HOUSEHOLD_ID = DEMO_HOUSEHOLD_ID;
 
 export { EXPORTED_DEMO_HOUSEHOLD_ID as DEMO_HOUSEHOLD_ID };
 
 export function getStore(): CuraStore {
-  // SupabaseStore wiring lands when the env trio arrives; until then the app runs fully on MockStore.
-  return (mockSingleton ??= new MockStore());
+  if (isDemoMode()) return (mockSingleton ??= new MockStore());
+  return (supabaseSingleton ??= new SupabaseStore());
 }

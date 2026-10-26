@@ -106,18 +106,16 @@ export async function fireOutboundCall(
               From: from,
               Twiml: buildOpeningTwiml(purpose, patientName, concern, turnUrl),
             })
-          : mode === "template"
-            ? // Trial-legal opening move (docs/usage/trials/try-out-voice): the call
-              // must start from one of Twilio's four hosted Voice Templates. The
-              // template speaks its canned demo text; parameter names for injecting
-              // Cura's script are TBD (console Start-a-call request shows them).
-              new URLSearchParams({
-                To: to,
-                Url: "https://webhooks.twilio.com/v1/Voice/Template/voice_text_to_speech",
-                ...(turnUrl
-                  ? { StatusCallback: `${publicBase}/api/telephony/status`, StatusCallbackMethod: "POST" }
-                  : {}),
-              })
+            : mode === "template"
+              ? // Trial-legal opening move (docs/usage/trials/try-out-voice): the call
+                // must start from one of Twilio's four hosted Voice Templates, and
+                // trial rejects StatusCallback too ("limited parameter access") —
+                // so: bare To + template Url. The template speaks its canned demo
+                // text; text override params are TBD (console Start-a-call request).
+                new URLSearchParams({
+                  To: to,
+                  Url: "https://webhooks.twilio.com/v1/Voice/Template/voice_text_to_speech",
+                })
             : turnUrl
               ? new URLSearchParams({ To: to, From: from, Url: turnUrl })
               : null;

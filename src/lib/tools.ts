@@ -193,9 +193,12 @@ export async function executeProposedCall(
         message: str(call.args.message) || `Emergency concern reported: ${str(call.args.concern)}`,
       });
       // Record what actually happened at Twilio — never a placebo "fired".
+      // Phase 7: crisis calls hold a real conversation — the turn webhook needs
+      // to know what happened, so the context rides on the turnUrl (encoded).
       const callResult = await fireOutboundCall("crisis_outreach", ctx.householdId, {
         patientName: ctx.patientName,
         concern: str(call.args.concern),
+        ctxExtras: { checkinId: ctx.checkin.id, concern: str(call.args.concern) },
       });
       return store.addAction({
         checkinId: ctx.checkin.id,

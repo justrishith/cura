@@ -7,6 +7,7 @@
 
 import crypto from "node:crypto";
 // (crypto reserved for webhook signature validation in the /api/telephony batch)
+import { crisisGreeting } from "./telephony-conv";
 
 export type CallPurpose = "clinic_booking" | "crisis_outreach";
 
@@ -16,7 +17,7 @@ export interface FireCallResult {
   providerSid?: string;
   reason?: string;
   /** True when the call was attempted via Url-mode (trial accounts can't pass Twiml). */
-  mode?: "twiml" | "url" | "webhook" | "template";
+  mode?: "twiml" | "template";
 }
 
 export function telephonyConfigured(): boolean {
@@ -48,18 +49,24 @@ export function buildOpeningTwiml(
   concern: string,
   turnUrl?: string | null
 ): string {
-  const say =
-    purpose === "clinic_booking"
-      ? `Hello — this is Cura, an automated care assistant calling on behalf of ${patientName}, who finished her daily check-in a few minutes ago. She reported concerning symptoms: ${concern || "a stiff low and worsening this morning"}. On her behalf, I'd like to set up an appointment. Can we talk about her calendar?`
-      : `Hello — this is Cura, an automated care assistant for ${patientName}. This is urgent, not routine. We graded her check-in as emergency-level for ${concern || "an urgent symptom"}. Please make contact with her right now, and consider emergency services if needed. I'll hang up so you can call her directly.`;
-
   if (purpose === "clinic_booking") {
-    // action must be an absolute URL when Twilio opens this TwiML via the Twiml or
-    // Url parameter — the Gather hands the caller's speech to /api/telephony/turn.
+    const say = `Hello — this is Cura, an automated care assistant calling on behalf of ${patientName}, who finished her daily check-in a few minutes ago. She reported concerning symptoms: ${concern || "a stiff low and worsening this morning"}. On her behalf, I'd like to set up an appointment. Can we talk about her calendar?`;
+    // action must be an absolute URL when Twilio opens this TwiML via the Twiml
+    // or Url parameter — the Gather hands the caller's speech to /api/telephony/turn.
     const action = turnUrl ? ` action="${escXml(turnUrl)}" actionOnEmptyResult="true"` : "";
     return `<Response><Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">${escXml(say)}</Say><Gather input="speech" speechTimeout="auto" language="en-US"${action}><Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">What's the earliest appointment you have for her?</Say></Gather></Response>`;
   }
-  return `<Response><Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">${escXml(say)}</Say><Hangup/></Response>`;
+  // crisis_outreach — Phase 7: the caregiver hears the full brief and Cura STAYS
+  // on the line (gather loop), replacing the old Say+Hangup script. The text is
+  // the same crisisGreeting the turn webhook speaks (phoneGreeting), so the
+  // TwiML opener and the webhook opener can't drift.
+  const say = crisisGreeting(concern || undefined, patientName);
+  if (!turnUrl) {
+    // Degraded edge (no public base → no gather loop possible): brief, then end.
+    return `<Response><Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">${escXml(say)}</Say><Hangup/></Response>`;
+  }
+  const action = ` action="${escXml(turnUrl)}" actionOnEmptyResult="true"`;
+  return `<Response><Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">${escXml(say)}</Say><Gather input="speech" speechTimeout="auto" language="en-US"${action}><Say voice="Google.en-US-Chirp3-HD-Leda" language="en-US">Go ahead — I'm listening.</Say></Gather></Response>`;
 }
 
 /**
@@ -71,7 +78,14 @@ export function buildOpeningTwiml(
 export async function fireOutboundCall(
   purpose: CallPurpose,
   householdId: string,
-  opts: { patientName?: string; concern?: string } = {}
+  opts: {
+    patientName?: string;
+    concern?: string;
+    /** Purpose-specific context, appended (encoded) to the turnUrl so the turn
+     * webhook knows what this call is about. crisis_outreach passes
+     * { checkinId, concern }; clinic_booking passes nothing → same URL as before. */
+    ctxExtras?: Record<string, string>;
+  } = {}
 ): Promise<FireCallResult> {
   const { getStore } = await import("./store");
   const store = getStore();
@@ -94,11 +108,17 @@ export async function fireOutboundCall(
       process.env.PUBLIC_BASE_URL?.trim() ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "")
     ).replace(/\/$/, "");
+    // Purpose-specific context rides on the turn webhook (query string). URLSearchParams
+    // encodes it; clinic_booking fires with no ctxExtras → byte-identical URL as before.
+    const ctxQuery =
+      opts.ctxExtras && Object.keys(opts.ctxExtras).length
+        ? new URLSearchParams(opts.ctxExtras).toString()
+        : "";
     const turnUrl = publicBase
-      ? `${publicBase}/api/telephony/turn?purpose=${encodeURIComponent(purpose)}`
+      ? `${publicBase}/api/telephony/turn?purpose=${encodeURIComponent(purpose)}${ctxQuery ? `&${ctxQuery}` : ""}`
       : null;
 
-    const createCall = async (mode: "twiml" | "webhook" | "template") => {
+    const createCall = async (mode: "twiml" | "template") => {
       const body =
         mode === "twiml"
           ? new URLSearchParams({
@@ -106,20 +126,17 @@ export async function fireOutboundCall(
               From: from,
               Twiml: buildOpeningTwiml(purpose, patientName, concern, turnUrl),
             })
-            : mode === "webhook"
-              // Trial verdict + 2026-10-26 live test: call-create with To + our own
-              // webhook Url and NO From at all is trial-legal (201) — Cura's real
-              // words from turn one, gather loop live. Any explicit From trips
-              // 573003 ("use your assigned trial number"): the caller-ID becomes
-              // Twilio's shared number, documented as a trial limitation.
-              ? turnUrl
-                ? new URLSearchParams({ To: to, Url: turnUrl })
-                : null
-              : // Last resort (no public base): Twilio's hosted template opener.
-                new URLSearchParams({
-                  To: to,
-                  Url: "https://webhooks.twilio.com/v1/Voice/Template/voice_text_to_speech",
-                });
+          : // Trial verdict (2026-10-26, empirically settled): trial accepts the
+            // call-create (201) with any Url but REFUSES to fetch non-template
+            // URLs at call time — it plays its "check your URL" guidance instead.
+            // Only Twilio's four hosted Voice Templates work on trial outbound:
+            // bare To + template, no From (an explicit From trips 573003).
+            // The caregiver's real conversation happens on Cura's inbound line,
+            // which every alert message includes.
+            new URLSearchParams({
+              To: to,
+              Url: "https://webhooks.twilio.com/v1/Voice/Template/voice_text_to_speech",
+            });
       if (!body) return { status: 0, json: {} as Record<string, unknown> };
 
       const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
@@ -135,18 +152,11 @@ export async function fireOutboundCall(
 
     // Attempt 1: Twiml param (works on paid accounts; self-hosted, no public URL needed).
     let { status, json } = await createCall("twiml");
-    let mode: "twiml" | "webhook" | "template" = "twiml";
+    let mode: "twiml" | "template" = "twiml";
 
-    // Attempt 2: trial accounts reject the Twiml parameter → call straight from
-    // OUR webhook (no From) so the opening words are Cura's and the gather loop
-    // runs live from the first second. Caller-ID is Twilio's shared number on trial.
-    if (status !== 200 && status !== 201 && turnUrl) {
-      const attempt = await createCall("webhook");
-      ({ status, json } = attempt);
-      mode = "webhook";
-    }
-
-    // Attempt 3: no public base available → Twilio's canned template opener.
+    // Attempt 2: trial accounts reject the Twiml parameter → Twilio's hosted
+    // template opener (real ring on trial; canned opening text is a documented
+    // trial limitation — the interactive conversation lives on Cura's inbound line).
     if (status !== 200 && status !== 201) {
       const attempt = await createCall("template");
       ({ status, json } = attempt);

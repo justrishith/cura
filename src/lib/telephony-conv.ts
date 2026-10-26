@@ -1,4 +1,5 @@
-// telephony-conv.ts — the live phone-call conversation loop (clinic-booking agent).
+// telephony-conv.ts — the live phone-call conversation loop (clinic-booking and
+// crisis-outreach agents).
 // Server-only. One exchange per Twilio <Gather> action hit on /api/telephony/turn:
 //   staff speech (SpeechResult) → Gemini tool loop → Cura's next spoken line.
 //
@@ -59,13 +60,27 @@ const CAP_WRAPUP =
 const DEGRADED_RETRY =
   "I'm sorry, I lost you for a second — could you repeat that once more?";
 const EMPTY_REPROMPT = "Sorry, I didn't catch that — whenever you're ready.";
-const NON_CLINIC_CLOSE =
-  "Understood — I'll make sure she gets the message. Thank you, goodbye.";
+
+/**
+ * crisis_outreach opening brief — spoken to the family CAREGIVER (not a clinic).
+ * Does NOT end the call: it states who is calling, what happened (her concern),
+ * what Cura already did (dashboard + a hold may be on the nearest clinic), and
+ * invites questions. One breath, so it still lands complete if the call reaches
+ * voicemail (no detection exists — the Gather just times out and the route
+ * re-prompts gently). Shared with buildOpeningTwiml (telephony.ts) so the TwiML
+ * opener and phoneGreeting can't drift.
+ */
+export function crisisGreeting(concern?: string, patientName: string = "Maria"): string {
+  return `Hello — this is Cura, an automated care assistant for ${patientName}. This is urgent, not routine: we graded her latest check-in as emergency-level${concern ? ` for ${concern}` : ""}. Your caregiver dashboard has everything; a hold may be placed on the nearest clinic. I'll stay on the line — any questions? What happened, how serious it is, whatever you need.`;
+}
 
 /** Greeting for the initial webhook fetch, per call purpose. */
-export function phoneGreeting(purpose: CallPurpose): string {
+export function phoneGreeting(
+  purpose: CallPurpose,
+  context?: { checkinId?: string; concern?: string }
+): string {
   return purpose === "crisis_outreach"
-    ? "Hello — this is Cura, an automated care assistant for Maria. This is urgent, not routine. We graded her check-in as emergency-level. Please make contact with her right now, and consider emergency services if needed. Thank you — goodbye."
+    ? crisisGreeting(context?.concern)
     : STAFF_GREETING; // keep in sync with buildOpeningTwiml in telephony.ts
 }
 
@@ -256,17 +271,127 @@ async function finishTurn(
   return { reply, done };
 }
 
+// ── Crisis-outreach branch (full conversation, not the old hang-up script) ─────
+
+/** crisis cap/degraded close: polite thank-you + the one directive that matters. */
+const CRISIS_WRAPUP =
+  "Thanks so much for staying on the line — I know this is a lot. Please call her directly, and if she has chest pain or breathing trouble right now, 911 needs to come from you. Everything's on your caregiver dashboard. Take care. Goodbye!";
+
+/**
+ * What the briefing tells the model: what she reported (concern + check-in
+ * summary/thread from the store) and the receipts/actions already fired. All
+ * read from the store — nothing invented. A missing check-in degrades to the
+ * essentials only.
+ */
+async function crisisBrief(
+  context?: { checkinId?: string; concern?: string }
+): Promise<string> {
+  const store = getStore();
+  const parts: string[] = [];
+  if (context?.concern) parts.push(`Her emergency concern: "${context.concern}".`);
+  if (context?.checkinId) {
+    const checkin = await store.getCheckin(context.checkinId);
+    if (checkin) {
+      if (checkin.summaryText) parts.push(`Her check-in summary: "${checkin.summaryText}"`);
+      const thread = checkin.thread
+        .slice(-10)
+        .map((t) => `${t.role === "cura" ? "Cura" : "Maria"} said: "${t.text}"`)
+        .join("; ");
+      if (thread) parts.push(`Their check-in exchange: ${thread}`);
+      const receipts = await store.getActionsForCheckin(checkin.id);
+      const fired = receipts
+        .map((a) => {
+          const payload = Object.entries(a.payload)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => `${k}=${String(v)}`)
+            .join(",")
+            .slice(0, 140);
+          return payload ? `${a.tool} (${a.status}: ${payload})` : `${a.tool} (${a.status})`;
+        })
+        .join("; ");
+      if (fired) parts.push(`Actions already taken: ${fired}.`);
+    }
+  }
+  return (
+    parts.join(" ") ||
+    "You have only the essentials: her latest check-in was graded emergency-level, and the full record lives on the caregiver dashboard."
+  );
+}
+
+/** crisis_outreach system persona — grounded, warm, never clinical authority. */
+function crisisSystemInstruction(brief: string): string {
+  return [
+    "You are Cura, an automated care assistant, on an URGENT call to the patient's FAMILY CAREGIVER (not a clinic).",
+    "You are the SPEAKER; the other party is the family caregiver. Speak in brief, warm, natural spoken sentences — two short sentences per turn at most. No lists, no markdown, no special characters.",
+    "Brief them on Maria's emergency check-in, then answer all their questions calmly and completely. Never diagnose, never recommend treatment, never claim medical authority.",
+    "You know exactly what she reported and everything Cura already did:",
+    brief,
+    'Directive for 911 questions: say exactly, "Please call her directly, and if she has chest pain or breathing trouble right now, 911 needs to come from you."',
+    "Everything you reported is on her caregiver dashboard; don't invent details beyond what you were given.",
+    "When they are wrapping up, or say they will call her or head over, thank them warmly and end that same reply with the single word 'Goodbye.'",
+  ].join("\n");
+}
+
+/**
+ * One spoken exchange of a crisis_outreach call: a live Q&A with the family
+ * caregiver. No tool declarations — nothing to book on this call, so the model
+ * cannot reach appointment machinery. Ends (done=true) on the model's own
+ * "Goodbye." wrap-up, the MAX-exchange cap, or a twice-degraded model call.
+ */
+async function runCrisisTurn(
+  callSid: string,
+  state: PhoneSession,
+  userText: string,
+  context?: { checkinId?: string; concern?: string }
+): Promise<{ reply: string; done: boolean }> {
+  const brief = await crisisBrief(context);
+  const opener =
+    state.interactionId == null
+      ? `You already opened the call by introducing yourself as Cura and briefing this family caregiver: Maria's latest check-in was graded emergency-level${context?.concern ? ` for ${context.concern}` : ""}; you told them the caregiver dashboard has everything and that you'll stay on the line for questions. `
+      : "";
+  const input = `${opener}The family caregiver just said: "${userText}" Reply with your next spoken line.`;
+
+  try {
+    const exchange = await createInteraction({
+      input,
+      systemInstruction: crisisSystemInstruction(brief),
+      previousId: state.interactionId,
+    });
+    if (exchange.id) state.interactionId = exchange.id;
+
+    const reply =
+      exchange.outputText.trim() ||
+      (state.turns === 1
+        ? "I'm here with you — ask me anything about what happened."
+        : "Thank you — anything else I can clear up?");
+    // The persona ends its wrap-up with the word "Goodbye." → that's the hang-up cue.
+    const done = /\bgoodbye\b[.,!]*$/i.test(reply.trim());
+    return finishTurn(callSid, reply, done);
+  } catch {
+    state.degraded += 1;
+    if (state.degraded >= 2) {
+      // Escalation-safe: deterministic close, never a fabricated model line.
+      return finishTurn(callSid, CRISIS_WRAPUP, true);
+    }
+    return finishTurn(callSid, DEGRADED_RETRY, false);
+  }
+}
+
 // ── The phone turn ─────────────────────────────────────────────────────────────
 
 /**
  * One spoken exchange of the outbound call.
- * `userText` = the clinic staff member's speech (Twilio SpeechResult), "" on silence.
+ * `userText` = the caller-side speech (Twilio SpeechResult), "" on silence.
+ * `context` (optional) = purpose-specific extras from the turnUrl query string
+ * (crisis_outreach: checkinId + concern). Append-only 4th arg — clinic_booking
+ * callers keep their original 3-arg signature.
  * Returns Cura's next spoken line; `done` = true means the route should Hangup.
  */
 export async function runPhoneTurn(
   callSid: string,
   purpose: CallPurpose,
-  userText: string
+  userText: string,
+  context?: { checkinId?: string; concern?: string }
 ): Promise<{ reply: string; done: boolean }> {
   const store = getStore();
   const call = await store.getCallBySid(callSid);
@@ -276,14 +401,9 @@ export async function runPhoneTurn(
   sessions.set(callSid, state);
   state.turns += 1;
 
-  // Persist the staff member's line first — the transcript must reflect the store.
+  // Persist the caller's line first — the transcript must reflect the store.
   if (userText) {
     await store.updateCallStatus(callSid, "in-progress", { role: "other", text: userText });
-  }
-
-  // crisis_outreach is a fixed script with no dialogue loop; close politely on any turn.
-  if (purpose !== "clinic_booking") {
-    return finishTurn(callSid, NON_CLINIC_CLOSE, true);
   }
 
   // Silence reached the model anyway — cheap re-prompt, no exchange burned.
@@ -292,9 +412,21 @@ export async function runPhoneTurn(
     return finishTurn(callSid, EMPTY_REPROMPT, false);
   }
 
-  // Loop cap ≤5 exchanges; after that, polite wrap-up (route Hangups).
+  // Loop cap ≤5 exchanges; after that, polite wrap-up (route Hangups). Crisis
+  // uses the same cap but closes with its own warm deterministic wrap-up.
   if (state.turns > MAX_PHONE_EXCHANGES) {
-    return finishTurn(callSid, CAP_WRAPUP, true);
+    return finishTurn(
+      callSid,
+      purpose === "crisis_outreach" ? CRISIS_WRAPUP : CAP_WRAPUP,
+      true
+    );
+  }
+
+  // crisis_outreach (Phase 7): hold the line — brief the family caregiver on
+  // the emergency check-in, take their questions, end politely. NOT the old
+  // one-shot hang-up script; live Q&A grounded in the store.
+  if (purpose === "crisis_outreach") {
+    return runCrisisTurn(callSid, state, userText, context);
   }
 
   // Context: the greeting was spoken before any model turn (Twiml param opening

@@ -59,6 +59,13 @@ export async function POST(req: Request) {
   const url = new URL(req.url);
   const purpose: CallPurpose =
     url.searchParams.get("purpose") === "crisis_outreach" ? "crisis_outreach" : "clinic_booking";
+  // Purpose-specific context from the turnUrl query (fireOutboundCall ctxExtras):
+  // crisis_outreach carries what happened + which check-in to brief from. Absent
+  // on clinic_booking → undefined, so that path behaves exactly as before.
+  const context = {
+    checkinId: url.searchParams.get("checkinId") ?? undefined,
+    concern: url.searchParams.get("concern") ?? undefined,
+  };
 
   // Twilio posts the webhook as urlencoded form data.
   const form = new URLSearchParams(await req.text().catch(() => ""));
@@ -72,7 +79,9 @@ export async function POST(req: Request) {
   if (!call) {
     // Registry detail: fireOutboundCall created a CallRecord (providerCallSid null at
     // create; no store API to backfill the Twilio sid), so the webhook anchors a new
-    // record keyed by the real CallSid. Demo runs on the DEMO household regardless.
+    // record keyed by the real CallSid. The record stays on the DEMO household —
+    // purpose context (checkinId/concern) travels in the query string, not the
+    // household, so a lookup miss triggers NO household change.
     call = await store.createCall({
       householdId: DEMO_HOUSEHOLD_ID,
       purpose,
@@ -82,7 +91,12 @@ export async function POST(req: Request) {
   }
 
   const base = resolveBaseUrl(url);
-  const action = `${base}/api/telephony/turn?purpose=${encodeURIComponent(purpose)}&sid=${encodeURIComponent(callSid)}`;
+  // Context params ride along so every mid-call Gather re-posts them and the
+  // turn agent keeps its briefing for the whole conversation.
+  const action =
+    `${base}/api/telephony/turn?purpose=${encodeURIComponent(purpose)}&sid=${encodeURIComponent(callSid)}` +
+    (context.checkinId ? `&checkinId=${encodeURIComponent(context.checkinId)}` : "") +
+    (context.concern ? `&concern=${encodeURIComponent(context.concern)}` : "");
   const speech = (form.get("SpeechResult") ?? "").trim();
 
   if (!speech) {
@@ -90,7 +104,7 @@ export async function POST(req: Request) {
       // Initial fetch with standard params only (no SpeechResult): Url-style calls
       // (or a manual replay) get the greeting + first gather here. ringing → in-progress.
       await store.updateCallStatus(callSid, "in-progress");
-      return twimlResponse(wrapResponse(gatherBlock(phoneGreeting(purpose), action)));
+      return twimlResponse(wrapResponse(gatherBlock(phoneGreeting(purpose, context), action)));
     }
     // Mid-call silence (actionOnEmptyResult fired): gentle re-prompt, no exchange cost.
     return twimlResponse(
@@ -100,7 +114,7 @@ export async function POST(req: Request) {
 
   let turn = { reply: "Sorry, I had a technical hiccup — let's try once more.", done: false };
   try {
-    turn = await runPhoneTurn(callSid, purpose, speech);
+    turn = await runPhoneTurn(callSid, purpose, speech, context);
   } catch {
     // runPhoneTurn degrades internally and persists; this guards only webhook surprises.
   }

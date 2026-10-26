@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cura — UI mockup (static reference)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .rise{animation:rise .2s ease-out}
+  @media (prefers-reduced-motion: reduce){.animate-ping,.animate-pulse,.rise{animation:none!important}}
+  @media print{.no-print{display:none!important}}
+  body.printing .tscreen{display:none!important}
+  body.printing #screen-summary{display:block!important}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+<!-- ================= NAV ================= -->
+<header class="no-print sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200">
+  <div class="max-w-5xl mx-auto px-6 py-3">
+    <div class="flex items-center justify-between">
+      <div class="text-xl font-bold tracking-tight">cura<span class="text-teal-600">.</span></div>
+      <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500">Demo — not medical advice</span>
+    </div>
+    <nav class="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold">
+      <button class="navchip px-3 py-1.5 rounded-full bg-teal-600 text-white" onclick="show('landing',this)">Landing</button>
+      <button class="navchip px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" onclick="show('patient',this)">Patient</button>
+      <button class="navchip px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" onclick="show('caregiver',this)">Caregiver</button>
+      <button class="navchip px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" onclick="show('call',this)">Call</button>
+      <button class="navchip px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" onclick="show('crisis',this)">Crisis state</button>
+      <button class="navchip px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" onclick="show('summary',this)">Summary</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ================= S1 LANDING ================= -->
+<section id="screen-landing" class="tscreen">
+  <div class="max-w-xl mx-auto px-6">
+    <div class="pt-24 text-center">
+      <h1 class="text-5xl font-bold tracking-tight">Care between visits.</h1>
+      <p class="mt-5 text-lg text-slate-600">Cura checks in by voice every day. When something's off, it makes the phone calls that matter — booking the doctor's appointment while family watches live.</p>
+      <div class="mt-8 flex flex-wrap gap-3 justify-center">
+        <button class="h-12 px-6 rounded-full bg-teal-600 text-white text-base font-semibold hover:bg-teal-700 shadow-sm">Start my check-in →</button>
+        <button class="h-12 px-6 rounded-full bg-white border border-slate-300 text-slate-700 font-semibold hover:border-slate-400">I'm the caregiver</button>
+      </div>
+    </div>
+    <div class="py-20 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div class="mx-auto h-11 w-11 rounded-full bg-teal-50 flex items-center justify-center text-xl">🎙️</div>
+        <div class="mt-3 font-semibold">Talk for 60 sec</div>
+        <div class="mt-1 text-sm text-slate-500">A plain-language check-in, by voice.</div>
+      </div>
+      <div class="bg-white border border-teal-200 rounded-2xl p-5 shadow-sm">
+        <div class="mx-auto h-11 w-11 rounded-full bg-teal-50 flex items-center justify-center text-xl">📞</div>
+        <div class="mt-3 font-semibold">Cura calls the office</div>
+        <div class="mt-1 text-sm text-slate-500">On your behalf, live — you watch.</div>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div class="mx-auto h-11 w-11 rounded-full bg-green-50 flex items-center justify-center text-xl">✅</div>
+        <div class="mt-3 font-semibold">Booked & logged</div>
+        <div class="mt-1 text-sm text-slate-500">Appointment + summary, family sees it.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= S2 PATIENT ================= -->
+<section id="screen-patient" class="tscreen hidden">
+  <div class="max-w-xl mx-auto px-6 py-8">
+    <div class="flex items-center justify-between">
+      <div class="text-lg font-bold tracking-tight">cura<span class="text-teal-600">.</span></div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-500">Check-in grade</span>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-bold"><span class="h-2 w-2 rounded-full bg-red-600"></span>HIGH</span>
+      </div>
+    </div>
+
+    <!-- call strip (post-call state for the mockup) -->
+    <div class="mt-4 bg-white border border-green-200 rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3">
+      <span class="h-2.5 w-2.5 rounded-full bg-green-600 animate-pulse"></span>
+      <div class="text-sm font-semibold text-green-700">Call with Dr. Chen's office — completed</div>
+      <div class="text-xs text-slate-400 ml-auto">Booked Tue 10:00</div>
+    </div>
+
+    <!-- mic orb -->
+    <div class="relative flex items-center justify-center mt-10">
+      <div class="absolute h-36 w-36 rounded-full bg-teal-500/25 animate-ping"></div>
+      <button class="relative h-24 w-24 rounded-full bg-teal-600 text-white shadow-lg flex items-center justify-center" aria-label="Listening — tap to stop">
+        <svg class="h-9 w-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+        <span class="absolute top-1 right-1 h-3 w-3 rounded-full bg-red-500 animate-pulse"></span>
+      </button>
+    </div>
+    <p class="mt-3 text-center text-slate-500">Listening… <button class="text-teal-700 font-semibold">tap to stop</button></p>
+
+    <!-- transcript -->
+    <div class="mt-8 space-y-3" aria-live="polite">
+      <div class="flex justify-end"><div class="max-w-[80%] bg-white border border-slate-200 rounded-2xl rounded-br-md px-5 py-3 shadow-sm text-[17px]">Dizzy since yesterday… and I'm out of my pills.</div></div>
+      <div class="flex"><div class="max-w-[80%] bg-teal-50 border border-teal-100 rounded-2xl rounded-bl-md px-5 py-3 text-[17px]">Noted — dizziness for two days. How about Metformin: no refills left?</div></div>
+      <div class="flex justify-end"><div class="max-w-[80%] bg-white border border-slate-200 rounded-2xl rounded-br-md px-5 py-3 shadow-sm text-[17px]">Right. And I want Dr. Chen to look at this.</div></div>
+      <div class="flex"><div class="max-w-[80%] bg-teal-50 border border-teal-100 rounded-2xl rounded-bl-md px-5 py-3 text-[17px]">Agreed — this needs a doctor's eyes. Want me to call Dr. Chen's office now?</div></div>
+      <div class="flex justify-end"><div class="max-w-[80%] bg-white border border-slate-200 rounded-2xl rounded-br-md px-5 py-3 shadow-sm text-[17px]">Yes, call them.</div></div>
+    </div>
+
+    <!-- action rail -->
+    <div class="mt-6 space-y-2">
+      <div class="rise bg-white border border-slate-200 border-l-4 border-l-teal-500 rounded-xl p-4 flex items-start gap-3">
+        <span class="text-lg">📎</span>
+        <div><div class="text-sm font-semibold">Symptoms logged — dizziness ×2 days</div><div class="text-xs text-slate-400">log_symptom · 9:34 AM</div></div>
+        <span class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-green-700">succeeded ✅</span>
+      </div>
+      <div class="rise bg-white border border-slate-200 border-l-4 border-l-amber-500 rounded-xl p-4 flex items-start gap-3">
+        <span class="text-lg">💊</span>
+        <div><div class="text-sm font-semibold">Refill requested — Metformin</div><div class="text-xs text-slate-400">request_refill · 9:35 AM</div></div>
+        <span class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700">scheduled ⏳</span>
+      </div>
+      <div class="rise bg-white border border-slate-200 border-l-4 border-l-green-600 rounded-xl p-4 flex items-start gap-3">
+        <span class="text-lg">📅</span>
+        <div><div class="text-sm font-semibold">Booked — Dr. Chen · Tue 10:00 AM</div><div class="text-xs text-slate-400">book_appointment · 9:38 AM</div></div>
+        <span class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-green-700">succeeded ✅</span>
+      </div>
+    </div>
+
+    <!-- text fallback -->
+    <div class="mt-8">
+      <p class="text-xs text-slate-500 mb-2">Prefer typing?</p>
+      <div class="flex gap-2"><input class="flex-1 h-12 px-4 rounded-full bg-white border border-slate-300 text-[17px]" placeholder="Type instead of talking…" /><button class="h-12 px-5 rounded-full bg-teal-600 text-white font-semibold">Send</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= S3 CAREGIVER ================= -->
+<section id="screen-caregiver" class="tscreen hidden">
+  <div class="max-w-5xl mx-auto px-6 py-10">
+    <div class="grid md:grid-cols-[300px_1fr] gap-6">
+      <!-- left -->
+      <div class="space-y-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center gap-3">
+            <div class="h-12 w-12 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center font-bold text-teal-700">M</div>
+            <div><div class="font-bold">Maria · 72</div><div class="text-xs text-slate-500">Demo Household</div></div>
+          </div>
+          <div class="mt-4 flex items-center justify-between text-sm"><span class="text-slate-500">Last check-in</span><span class="font-semibold">09:32 AM</span></div>
+          <div class="mt-2 flex items-center justify-between text-sm"><span class="text-slate-500">Grade</span><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-bold"><span class="h-2 w-2 rounded-full bg-red-600"></span>HIGH</span></div>
+          <p class="mt-3 text-sm text-slate-600">"Dizzy for two days, out of Metformin. Wants Dr. Chen to look at it."</p>
+          <a class="mt-3 inline-block text-sm font-semibold text-teal-700" href="#"><span class="hidden sm:inline">📄</span> Doctor summary</a>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between"><div class="font-bold text-sm">Alerts</div><span class="text-[11px] px-2 py-0.5 rounded-full bg-red-50 border border-red-200 text-red-600 font-bold">1 new</span></div>
+          <div class="mt-3 flex items-start gap-3">
+            <span class="text-lg">🔺</span>
+            <div class="text-sm"><div class="font-semibold">Dizziness reported — HIGH</div><div class="text-xs text-slate-500">Caregiver alerted 09:33 AM</div></div>
+            <button class="ml-auto text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-300 hover:bg-slate-50">Got it</button>
+          </div>
+          <div class="mt-3 flex items-start gap-3 pt-3 border-t border-slate-100">
+            <span class="text-lg">📞</span>
+            <div class="text-sm"><div class="font-semibold">Call to Dr. Chen's office — 2m 04s</div><div class="text-xs text-slate-500">Outcome: appointment booked ✅</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- right -->
+      <div>
+        <div class="flex gap-1.5 text-xs font-semibold">
+          <span class="px-3 py-1.5 rounded-full bg-teal-600 text-white">Timeline</span>
+          <span class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">Meds</span>
+          <span class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">Calls</span>
+        </div>
+        <div class="mt-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center gap-3"><div class="text-sm font-bold">Today</div><div class="text-xs text-slate-400">Nov — demo data</div></div>
+          <div class="mt-4 flex gap-4">
+            <div class="text-xs text-slate-400 w-16 shrink-0 pt-1">09:32</div>
+            <div class="flex-1">
+              <div class="flex items-center gap-2"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-50 border border-red-200 text-red-600 text-[11px] font-bold"><span class="h-1.5 w-1.5 rounded-full bg-red-600"></span>HIGH</span><span class="text-sm font-semibold">Voice check-in — dizziness, medication shortage</span></div>
+              <div class="mt-2 flex flex-wrap gap-1.5 text-xs"><span class="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">dizziness ×2d</span><span class="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">refill: Metformin</span></div>
+              <div class="mt-3 space-y-1.5 text-xs text-slate-500">
+                <div>📎 log_symptom ✅ · 💊 request_refill ⏳ · 📅 book_appointment ✅</div>
+                <div>📞 outbound call → clinic — booked Tue 10:00 ✅</div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-6 flex gap-4 pt-4 border-t border-slate-100">
+            <div class="text-xs text-slate-400 w-16 shrink-0 pt-1">Tue</div>
+            <div class="flex-1 text-sm"><span class="font-semibold text-green-700">📅 10:00 AM — Dr. Chen, Internal Medicine</span><span class="text-xs text-slate-400 ml-2">booked by Cura</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= S4 CALL CONSOLE ================= -->
+<section id="screen-call" class="tscreen hidden">
+  <div class="max-w-3xl mx-auto px-6 py-8">
+    <div class="bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3">
+      <span class="inline-flex items-center gap-2 text-sm font-bold text-green-700"><span class="h-2.5 w-2.5 rounded-full bg-green-600 animate-pulse"></span>In call — 00:47</span>
+      <span class="text-sm text-slate-500">Dr. Chen's office, Sunnyvale</span>
+      <button class="ml-auto text-xs font-bold px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50">End call</button>
+    </div>
+
+    <div class="mt-5 space-y-3" aria-live="polite">
+      <div class="flex"><div class="max-w-[85%] bg-teal-50 border border-teal-100 rounded-2xl rounded-bl-md px-5 py-3 text-[17px]">Hi — I'm Cura, an automated assistant calling on behalf of Maria, 72. She's had dizziness for two days and has run out of her Metformin.</div></div>
+      <div class="flex justify-end"><div class="max-w-[85%] bg-white border border-slate-200 rounded-2xl rounded-br-md px-5 py-3 shadow-sm text-[17px]">Dr. Chen's office, how can I help?</div></div>
+      <div class="flex"><div class="max-w-[85%] bg-teal-50 border border-teal-100 rounded-2xl rounded-bl-md px-5 py-3 text-[17px]">What's your earliest appointment Tuesday morning? And can we request the Metformin refill while we're at it?</div></div>
+      <div class="flex justify-end"><div class="max-w-[85%] bg-white border border-slate-200 rounded-2xl rounded-br-md px-5 py-3 shadow-sm text-[17px]">Let me see… Tuesday 10:00 works.</div></div>
+      <div class="flex"><div class="max-w-[85%] bg-teal-50 border border-teal-100 rounded-2xl rounded-bl-md px-5 py-3 text-[17px]">Tuesday 10:00 is perfect. Could you confirm that's with Dr. Chen, Internal Medicine?</div></div>
+      <div class="flex justify-end"><div class="max-w-[85%] bg-white border border-slate-200 rounded-2xl rounded-br-md px-5 py-3 shadow-sm text-[17px]">Confirmed. I've noted the refill.</div></div>
+    </div>
+
+    <div class="mt-5 flex flex-wrap gap-2">
+      <span class="px-3 py-1.5 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-bold">Tue 10:00 ✅ booked</span>
+      <span class="px-3 py-1.5 rounded-full bg-white border border-slate-300 text-slate-600 text-xs font-semibold">Tue 14:30 open</span>
+      <span class="px-3 py-1.5 rounded-full bg-white border border-slate-300 text-slate-600 text-xs font-semibold">Wed 9:00 open</span>
+    </div>
+
+    <div class="mt-5 space-y-2">
+      <div class="rise bg-white border border-slate-200 border-l-4 border-l-teal-500 rounded-xl p-4 flex items-start gap-3">
+        <span class="text-lg">📎</span><div><div class="text-sm font-semibold">Patient summary relayed — dizziness ×2 days, refill shortage</div><div class="text-xs text-slate-400">relay_patient_summary · live</div></div>
+        <span class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-green-700">succeeded ✅</span>
+      </div>
+      <div class="rise bg-white border border-slate-200 border-l-4 border-l-green-600 rounded-xl p-4 flex items-start gap-3">
+        <span class="text-lg">📅</span><div><div class="text-sm font-semibold">Booked — Dr. Chen · Tue 10:00 AM · refill noted</div><div class="text-xs text-slate-400">book_appointment · live</div></div>
+        <span class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-green-700">succeeded ✅</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= S5 CRISIS ================= -->
+<section id="screen-crisis" class="tscreen hidden">
+  <div class="sticky top-0 z-40 bg-red-600 text-white">
+    <div class="max-w-xl mx-auto px-6 py-3 flex items-center gap-3 text-sm">
+      <span class="text-lg">🆘</span>
+      <div class="font-semibold">Your note says this is urgent. Your caregiver has been alerted.</div>
+      <a href="tel:911" class="ml-auto h-10 px-4 rounded-full bg-white text-red-600 font-bold inline-flex items-center">Call 911</a>
+    </div>
+  </div>
+  <div class="max-w-xl mx-auto px-6 py-8">
+    <div class="flex items-center justify-between">
+      <div class="text-lg font-bold tracking-tight">cura<span class="text-teal-600">.</span></div>
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600 text-white text-xs font-bold"><span class="h-2 w-2 rounded-full bg-white animate-pulse"></span>CRISIS</span>
+    </div>
+    <div class="mt-6 space-y-3">
+      <div class="flex justify-end"><div class="max-w-[80%] bg-white border border-slate-200 rounded-2xl rounded-br-md px-5 py-3 shadow-sm text-[17px]">The chest tightness came back — worse than this morning. Something is wrong.</div></div>
+      <div class="flex"><div class="max-w-[80%] bg-teal-50 border border-red-200 rounded-2xl rounded-bl-md px-5 py-3 text-[17px] font-semibold text-red-700">I'm concerned about this. Please don't wait. Your caregiver has an alert — and if you feel worse, call emergency services right now.</div></div>
+    </div>
+    <div class="mt-6 space-y-2">
+      <div class="rise bg-white border border-slate-200 border-l-4 border-l-red-600 rounded-xl p-4 flex items-start gap-3">
+        <span class="text-lg">🆘</span><div><div class="text-sm font-semibold text-red-600">Crisis alert — caregiver notified</div><div class="text-xs text-slate-400">crisis_alert · scripted · 9:41 AM</div></div>
+        <span class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-green-700">succeeded ✅</span>
+      </div>
+      <div class="rise bg-white border border-slate-200 border-l-4 border-l-red-600 rounded-xl p-4 flex items-start gap-3">
+        <span class="text-lg">📞</span><div><div class="text-sm font-semibold">Calling your caregiver's line</div><div class="text-xs text-slate-400">outbound_call · 9:41 AM</div></div>
+        <span class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700">dialing…</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= S6 SUMMARY (print) ================= -->
+<section id="screen-summary" class="tscreen hidden">
+  <div class="max-w-3xl mx-auto px-6 py-10">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="text-xl font-bold tracking-tight">Care summary — Maria</div>
+          <div class="text-xs text-slate-500 mt-1">Generated by Cura · Oct 25, 2026 · 10:12 AM</div>
+        </div>
+        <div class="text-lg font-bold">cura<span class="text-teal-600">.</span></div>
+      </div>
+      <div class="mt-6">
+        <div class="text-sm font-bold">Check-ins</div>
+        <table class="mt-2 w-full text-sm">
+          <thead><tr class="bg-slate-100 text-left text-xs text-slate-500"><th class="p-2 rounded-l-lg">Time</th><th class="p-2">Grade</th><th class="p-2">Symptoms</th><th class="p-2 rounded-r-lg">Actions taken</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr>
+              <td class="p-2">Today 09:32</td>
+              <td class="p-2"><span class="px-2 py-0.5 rounded-full bg-red-50 border border-red-200 text-red-600 text-[11px] font-bold">HIGH</span></td>
+              <td class="p-2">Dizziness ×2 days</td>
+              <td class="p-2">Logged · refill requested · called office · booked Tue 10:00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-6"><div class="text-sm font-bold">Medications</div>
+        <div class="mt-2 space-y-2 text-sm">
+          <div class="flex items-center gap-2"><span class="font-semibold">Metformin</span><span class="text-slate-500">500mg, 2× daily</span><span class="ml-auto px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold">refill requested</span></div>
+          <div class="flex items-center gap-2"><span class="font-semibold">Lisinopril</span><span class="text-slate-500">10mg, morning</span><span class="ml-auto px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-green-700 text-[11px] font-bold">ok</span></div>
+        </div>
+      </div>
+      <div class="mt-6"><div class="text-sm font-bold">Calls made by Cura</div>
+        <div class="mt-2 text-sm space-y-1.5">
+          <div>📞 to <span class="font-semibold">Dr. Chen's office</span> — Oct 25 9:38 AM · 2m 04s · <span class="text-green-700 font-semibold">outcome: appointment booked</span></div>
+        </div>
+      </div>
+      <button onclick="document.body.classList.add('printing');window.print();setTimeout(()=>document.body.classList.remove('printing'),400)" class="no-print mt-8 h-11 px-5 rounded-full bg-teal-600 text-white font-semibold">Print / Save as PDF</button>
+    </div>
+  </div>
+</section>
+
+<footer class="no-print pb-10 pt-6 text-center text-xs text-slate-400">Care between visits — NextSpark Hacks '26 · static design reference, not the app</footer>
+
+<script>
+function show(name, btn){
+  document.querySelectorAll('.tscreen').forEach(s=>s.classList.add('hidden'));
+  document.getElementById('screen-'+name).classList.remove('hidden');
+  document.querySelectorAll('.navchip').forEach(b=>{b.classList.remove('bg-teal-600','text-white');b.classList.add('bg-slate-100','text-slate-600');});
+  btn.classList.add('bg-teal-600','text-white');btn.classList.remove('bg-slate-100','text-slate-600');
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>

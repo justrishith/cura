@@ -11,9 +11,9 @@ export interface MedCardProps {
 }
 
 const REFILL_STYLES: Record<RefillStatus, string> = {
-  ok: "bg-green-50 text-green-600",
-  requested: "bg-amber-50 text-amber-600",
-  ordered: "bg-green-50 text-green-600",
+  ok: "bg-oksoft text-ok",
+  requested: "bg-warnsoft text-warn",
+  ordered: "bg-oksoft text-ok",
 };
 
 const REFILL_LABELS: Record<RefillStatus, string> = {
@@ -26,19 +26,19 @@ export function MedCard({ name, dosage, refillStatus, lastRefillLabel }: MedCard
   return (
     <section
       data-testid={`med-card-${refillStatus}`}
-      className="rounded-2xl border border-slate-200 bg-white p-4"
+      className="r-panel border border-hairline bg-paper p-4"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-base font-semibold text-slate-900">{name}</p>
+        <p className="font-display text-lg font-medium text-ink">{name}</p>
         <span
           className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${REFILL_STYLES[refillStatus]}`}
         >
           {REFILL_LABELS[refillStatus]}
         </span>
       </div>
-      {dosage && <p className="mt-0.5 text-sm text-slate-500">{dosage}</p>}
+      {dosage && <p className="mt-0.5 text-sm text-inkmuted">{dosage}</p>}
       {lastRefillLabel && (
-        <p className="mt-1 text-xs text-slate-400">Last refill {lastRefillLabel}</p>
+        <p className="mt-1 text-xs text-inkmuted/70">Last refill {lastRefillLabel}</p>
       )}
     </section>
   );

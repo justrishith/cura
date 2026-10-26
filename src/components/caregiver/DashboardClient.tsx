@@ -62,27 +62,27 @@ export function DashboardClient() {
   }, []);
 
   if (!loaded && !data) {
-    return <main className="p-10 text-center text-slate-500">Loading the dashboard…</main>;
+    return <main className="p-10 text-center text-inkmuted">Loading the dashboard…</main>;
   }
 
   const latest = data?.checkins[0] ?? null;
 
   return (
-    <main className="bg-slate-50 pb-10">
+    <main className="bg-sand pb-10">
       <header className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3 px-4 pt-6">
         <div className="flex items-center gap-3">
           <Link href="/" aria-label="Cura home" className="rounded-full">
             <CuraMark />
           </Link>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-500">
+          <span className="rounded-full bg-muted px-3 py-1 text-xs text-inkmuted">
             Demo — not medical advice
           </span>
         </div>
         <nav className="flex items-center gap-4 text-sm font-medium">
-          <Link href="/patient" className="min-h-12 inline-flex items-center text-teal-700 underline-offset-4 hover:underline">
+          <Link href="/patient" className="min-h-12 inline-flex items-center text-clay underline-offset-4 hover:underline">
             Patient console
           </Link>
-          <Link href="/" className="min-h-12 inline-flex items-center text-slate-500 underline-offset-4 hover:underline">
+          <Link href="/" className="min-h-12 inline-flex items-center text-inkmuted underline-offset-4 hover:underline">
             Home
           </Link>
         </nav>
@@ -91,7 +91,7 @@ export function DashboardClient() {
       <h1 className="sr-only">Caregiver dashboard</h1>
 
       {error && (
-        <p role="alert" className="mx-auto mt-4 max-w-5xl rounded-xl bg-amber-50 px-4 py-2 text-sm text-amber-700">
+        <p role="alert" className="mx-auto mt-4 max-w-5xl rounded-xl bg-warnsoft px-4 py-2 text-sm text-warn">
           {error}
         </p>
       )}
@@ -111,20 +111,20 @@ export function DashboardClient() {
               summary={latest.summaryText ?? ""}
             />
           ) : (
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+            <section className="a-drop r-tray border border-hairline bg-paper p-6 text-sm text-inkmuted">
               No check-ins yet —{" "}
-              <Link href="/patient" className="font-medium text-teal-700 underline-offset-4 hover:underline">
+              <Link href="/patient" className="font-medium text-clay underline-offset-4 hover:underline">
                 try the patient console
               </Link>
               .
             </section>
           )}
 
-          <section aria-label="Alerts" className="rounded-2xl border border-slate-200 bg-white p-4">
-            <h2 className="text-xs font-bold uppercase tracking-wide text-slate-400">Alerts</h2>
+          <section aria-label="Alerts" className="a-drop d-2 r-panel border border-hairline bg-paper p-4">
+            <h2 className="text-xs font-bold uppercase tracking-wide text-inkmuted/70">Alerts</h2>
             <div className="mt-3 flex flex-col gap-2">
               {(data?.notifications.length ?? 0) === 0 && (
-                <p className="text-sm text-slate-500">No alerts — nothing needs you right now.</p>
+                <p className="text-sm text-inkmuted">No alerts — nothing needs you right now.</p>
               )}
               {data?.notifications.map((notification) => (
                 <AlertRow
@@ -141,7 +141,7 @@ export function DashboardClient() {
         </div>
 
         {/* Right column: tabbed feed */}
-        <section aria-label="Activity" className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6">
+        <section aria-label="Activity" className="a-drop d-3 r-sheet border border-hairline bg-paper p-4 md:p-6">
           <div role="tablist" aria-label="Activity tabs" className="flex gap-2">
             {TABS.map((t) => (
               <button
@@ -150,8 +150,8 @@ export function DashboardClient() {
                 role="tab"
                 aria-selected={tab === t.id}
                 onClick={() => setTab(t.id)}
-                className={`min-h-12 inline-flex items-center rounded-full px-4 text-sm font-semibold transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 ${
-                  tab === t.id ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                className={`min-h-12 inline-flex items-center rounded-full px-4 text-sm font-semibold transition-colors duration-[240ms] ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 ${
+                  tab === t.id ? "bg-moss text-paper" : "bg-muted text-inkmuted hover:bg-stone/60"
                 }`}
               >
                 {t.label}
@@ -159,7 +159,9 @@ export function DashboardClient() {
             ))}
           </div>
           <div role="tabpanel" className="mt-4">
-            <DashboardPanels tab={tab} data={data} />
+            <div key={tab} className="a-tab">
+              <DashboardPanels tab={tab} data={data} />
+            </div>
           </div>
         </section>
       </div>

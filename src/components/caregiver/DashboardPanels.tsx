@@ -49,9 +49,9 @@ export function DashboardPanels({ tab, data }: { tab: DashboardTab; data: Caregi
     <>
       {tab === "timeline" &&
         ((data?.checkins.length ?? 0) === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-inkmuted">
             No check-ins yet —{" "}
-            <Link href="/patient" className="font-medium text-teal-700 underline-offset-4 hover:underline">
+            <Link href="/patient" className="font-medium text-clay underline-offset-4 hover:underline">
               try the patient console
             </Link>
             .
@@ -70,7 +70,7 @@ export function DashboardPanels({ tab, data }: { tab: DashboardTab; data: Caregi
 
       {tab === "meds" &&
         ((data?.meds.length ?? 0) === 0 ? (
-          <p className="text-sm text-slate-500">No medications on file.</p>
+          <p className="text-sm text-inkmuted">No medications on file.</p>
         ) : (
           <div className="flex flex-col gap-2">
             {data?.meds.map((med) => (
@@ -81,7 +81,7 @@ export function DashboardPanels({ tab, data }: { tab: DashboardTab; data: Caregi
 
       {tab === "calls" &&
         ((data?.calls.length ?? 0) === 0 ? (
-          <p className="text-sm text-slate-500">No calls yet — calls Cura places will show up here.</p>
+          <p className="text-sm text-inkmuted">No calls yet — calls Cura places will show up here.</p>
         ) : (
           data?.calls.map((call) => (
             <div key={call.id}>
@@ -91,10 +91,10 @@ export function DashboardPanels({ tab, data }: { tab: DashboardTab; data: Caregi
                 outcome={outcomeFor(call.purpose, call.status)}
                 timeLabel={timeLabel(call.startedAt)}
               />
-              <p className="pb-2 text-xs text-slate-400">
+              <p className="pb-2 text-xs text-inkmuted/70">
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold ${
-                    call.purpose === "clinic_booking" ? "bg-teal-50 text-teal-700" : "bg-red-50 text-red-600"
+                    call.purpose === "clinic_booking" ? "bg-oksoft text-ok" : "bg-dangersoft text-danger"
                   }`}
                 >
                   {call.purpose === "clinic_booking" ? "clinic" : "emergency"}

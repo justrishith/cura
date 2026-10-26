@@ -14,8 +14,8 @@ export interface CallLogRowProps {
 }
 
 const OUTCOME_STYLES: Record<CallLogRowProps["outcome"], string> = {
-  booked: "bg-green-50 text-green-600",
-  "no-booking": "bg-amber-50 text-amber-600",
+  booked: "bg-oksoft text-ok",
+  "no-booking": "bg-warnsoft text-warn",
 };
 
 const OUTCOME_LABELS: Record<CallLogRowProps["outcome"], string> = {
@@ -33,31 +33,31 @@ export function CallLogRow({
   return (
     <div
       data-testid={`call-log-row-${outcome}`}
-      className="flex items-start gap-3 border-t border-slate-200 py-3"
+      className="flex items-start gap-3 border-t border-hairline py-3"
     >
       {direction === "out" ? (
         <ArrowUpRight
           aria-hidden="true"
-          className="mt-0.5 h-4 w-4 shrink-0 text-teal-600"
+          className="mt-0.5 h-4 w-4 shrink-0 text-moss"
           strokeWidth={1.5}
         />
       ) : (
         <ArrowDownLeft
           aria-hidden="true"
-          className="mt-0.5 h-4 w-4 shrink-0 text-slate-500"
+          className="mt-0.5 h-4 w-4 shrink-0 text-inkmuted"
           strokeWidth={1.5}
         />
       )}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-slate-900">{destination}</span>
+          <span className="text-sm font-semibold text-ink">{destination}</span>
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${OUTCOME_STYLES[outcome]}`}
           >
             {OUTCOME_LABELS[outcome]}
           </span>
         </div>
-        <p className="mt-0.5 text-xs text-slate-400">
+        <p className="mt-0.5 text-xs text-inkmuted/70">
           {direction === "out" ? "Outbound" : "Inbound"}
           {durationText ? ` · ${durationText}` : ""}
           {timeLabel ? ` · ${timeLabel}` : ""}

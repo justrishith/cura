@@ -39,9 +39,9 @@ function symptomsFor(actions: ActionReceipt[]): string[] {
 }
 
 const REFILL_CHIP: Record<string, string> = {
-  ok: "text-green-700",
-  requested: "text-amber-700",
-  ordered: "text-green-800",
+  ok: "text-ok",
+  requested: "text-warn",
+  ordered: "text-ok",
 };
 
 export default function SummaryPage({
@@ -50,7 +50,7 @@ export default function SummaryPage({
   searchParams: Promise<{ householdId?: string }>;
 }) {
   return (
-    <Suspense fallback={<main className="mx-auto max-w-3xl bg-white p-8 text-slate-500">Preparing summary…</main>}>
+    <Suspense fallback={<main className="mx-auto max-w-3xl bg-sand p-8 text-inkmuted">Preparing summary…</main>}>
       <SummaryBody searchParams={searchParams} />
     </Suspense>
   );
@@ -64,7 +64,7 @@ async function SummaryBody({
   const householdId = (await searchParams).householdId ?? DEMO_HOUSEHOLD_ID;
   const store = getStore();
   if (!(await store.getHousehold(householdId))) {
-    return <main className="mx-auto max-w-3xl bg-white p-8 text-slate-700">Unknown household.</main>;
+    return <main className="mx-auto max-w-3xl bg-sand p-8 text-inkmuted">Unknown household.</main>;
   }
 
   // PRD persona constant: the demo patient is Maria, 72.
@@ -88,12 +88,12 @@ async function SummaryBody({
   });
 
   return (
-    <main className="min-h-dvh bg-white text-slate-900">
-      <div className="mx-auto w-full max-w-3xl bg-white px-6 py-10 print:px-0 print:py-4">
+    <main className="min-h-dvh bg-sand text-ink">
+      <div className="mx-auto w-full max-w-3xl bg-paper px-6 py-10 print:border-0 print:bg-white print:px-0 print:py-4 print:shadow-none">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Visit summary for {patientName}</h1>
-            <p className="mt-1 text-sm text-slate-500">Generated {generatedAt}</p>
+            <h1 className="font-display text-3xl font-semibold tracking-tight">Visit summary for {patientName}</h1>
+            <p className="mt-1 text-sm text-inkmuted">Generated {generatedAt}</p>
           </div>
           <div className="flex items-center gap-4 print:hidden">
             <CuraMark />
@@ -103,13 +103,13 @@ async function SummaryBody({
 
         {/* Check-ins: time · grade · symptoms → actions */}
         <section className="mt-8">
-          <h2 className="text-lg font-bold tracking-tight">Check-ins</h2>
+          <h2 className="font-display text-lg font-semibold tracking-tight">Check-ins</h2>
           {withActions.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">No check-ins recorded yet.</p>
+            <p className="mt-2 text-sm text-inkmuted">No check-ins recorded yet.</p>
           ) : (
             <table className="mt-2 w-full border-collapse text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-stone text-xs uppercase tracking-wide text-inkmuted">
                   <th scope="col" className="py-2 pr-3 font-semibold">Time</th>
                   <th scope="col" className="py-2 pr-3 font-semibold">Grade</th>
                   <th scope="col" className="py-2 pr-3 font-semibold">Symptoms</th>
@@ -118,13 +118,13 @@ async function SummaryBody({
               </thead>
               <tbody>
                 {withActions.map((c) => (
-                  <tr key={c.id} className="border-b border-slate-200 align-top">
-                    <td className="py-2 pr-3 whitespace-nowrap text-slate-700">
+                  <tr key={c.id} className="border-b border-hairline align-top">
+                    <td className="py-2 pr-3 whitespace-nowrap text-inkmuted">
                       {dateLabel(c.startedAt)} {timeLabel(c.startedAt)}
                     </td>
                     <td className="py-2 pr-3"><GradeBadge grade={c.grade} /></td>
-                    <td className="py-2 pr-3 text-slate-700">{symptomsFor(c.actions).join(", ") || "—"}</td>
-                    <td className="py-2 text-xs text-slate-600">
+                    <td className="py-2 pr-3 text-inkmuted">{symptomsFor(c.actions).join(", ") || "—"}</td>
+                    <td className="py-2 text-xs text-inkmuted">
                       {c.actions.length === 0
                         ? "—"
                         : c.actions.map((a) => (
@@ -142,13 +142,13 @@ async function SummaryBody({
 
         {/* Medications with refill states */}
         <section className="mt-8">
-          <h2 className="text-lg font-bold tracking-tight">Medications</h2>
-          <ul className="mt-2 divide-y divide-slate-200 text-sm">
+          <h2 className="font-display text-lg font-semibold tracking-tight">Medications</h2>
+          <ul className="mt-2 divide-y divide-hairline text-sm">
             {meds.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                 <span className="font-semibold">{m.name}</span>
-                {m.dosage && <span className="text-slate-500">{m.dosage}</span>}
-                <span className={`font-semibold ${REFILL_CHIP[m.refillStatus] ?? "text-slate-500"}`}>
+                {m.dosage && <span className="text-inkmuted">{m.dosage}</span>}
+                <span className={`font-semibold ${REFILL_CHIP[m.refillStatus] ?? "text-inkmuted"}`}>
                   refill: {m.refillStatus}
                 </span>
               </li>
@@ -158,16 +158,16 @@ async function SummaryBody({
 
         {/* Booked appointments */}
         <section className="mt-8">
-          <h2 className="text-lg font-bold tracking-tight">Booked appointments</h2>
+          <h2 className="font-display text-lg font-semibold tracking-tight">Booked appointments</h2>
           {bookedAppointments.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">No appointments booked yet.</p>
+            <p className="mt-2 text-sm text-inkmuted">No appointments booked yet.</p>
           ) : (
-            <ul className="mt-2 divide-y divide-slate-200 text-sm">
+            <ul className="mt-2 divide-y divide-hairline text-sm">
               {bookedAppointments.map((a) => (
                 <li key={a.id} className="py-2">
                   <span className="font-semibold">{a.provider}</span>
-                  <span className="text-slate-500"> — {slotLabel(a.slot)}</span>
-                  <span className="text-xs text-slate-400"> · via {a.via === "phone" ? "phone (Cura)" : "web"}</span>
+                  <span className="text-inkmuted"> — {slotLabel(a.slot)}</span>
+                  <span className="text-xs text-inkmuted/70"> · via {a.via === "phone" ? "phone (Cura)" : "web"}</span>
                 </li>
               ))}
             </ul>
@@ -176,13 +176,13 @@ async function SummaryBody({
 
         {/* Call log */}
         <section className="mt-8">
-          <h2 className="text-lg font-bold tracking-tight">Calls</h2>
+          <h2 className="font-display text-lg font-semibold tracking-tight">Calls</h2>
           {calls.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">No calls recorded.</p>
+            <p className="mt-2 text-sm text-inkmuted">No calls recorded.</p>
           ) : (
-            <ul className="mt-2 divide-y divide-slate-200 text-sm">
+            <ul className="mt-2 divide-y divide-hairline text-sm">
               {calls.map((c) => (
-                <li key={c.id} className="py-2 text-slate-700">
+                <li key={c.id} className="py-2 text-inkmuted">
                   Outbound call — {c.toNumber} · {timeLabel(c.startedAt)} ·{" "}
                   {c.purpose === "clinic_booking" ? "clinic booking" : "emergency outreach"} · {c.status}
                 </li>
@@ -191,7 +191,7 @@ async function SummaryBody({
           )}
         </section>
 
-        <p className="mt-10 text-xs text-slate-400 print:mt-6">
+        <p className="mt-10 text-xs text-inkmuted/60 print:mt-6">
           Demo — not medical advice. All data mocked.
         </p>
       </div>

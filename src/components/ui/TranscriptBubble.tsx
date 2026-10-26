@@ -1,16 +1,18 @@
 // C4 — transcript bubbles + feed container (design.md §4-C4). Server-safe.
+// Organic dressing: Cura's turns sit on the deep moss field (light text),
+// the patient's turns on pale paper sheets with a hairline edge.
 export type TranscriptRole = "cura" | "patient";
 
 export interface TranscriptBubbleProps {
   role: TranscriptRole;
   text: string;
-  /** Rendered only when provided, tiny slate-400 under the bubble. */
+  /** Rendered only when provided, tiny muted line under the bubble. */
   timestamp?: string;
 }
 
 const BUBBLE_STYLES: Record<TranscriptRole, string> = {
-  patient: "self-end rounded-br-md bg-white border border-slate-200 text-slate-900",
-  cura: "self-start rounded-bl-md bg-teal-50 border border-teal-100 text-slate-900",
+  patient: "self-end r-sheet bg-paper border border-hairline text-ink",
+  cura: "self-start r-panel bg-moss text-paper",
 };
 
 export function TranscriptBubble({ role, text, timestamp }: TranscriptBubbleProps) {
@@ -19,10 +21,12 @@ export function TranscriptBubble({ role, text, timestamp }: TranscriptBubbleProp
       data-testid={`transcript-${role}`}
       className={`flex max-w-[80ch] flex-col ${role === "patient" ? "items-end" : "items-start"}`}
     >
-      <p className={`max-w-[80ch] rounded-2xl px-4 py-2.5 text-base leading-relaxed ${BUBBLE_STYLES[role]}`}>
+      <p
+        className={`max-w-[80ch] a-drop px-4 py-2.5 text-base leading-relaxed ${BUBBLE_STYLES[role]}`}
+      >
         {text}
       </p>
-      {timestamp && <p className="mt-0.5 text-xs text-slate-400">{timestamp}</p>}
+      {timestamp && <p className="mt-0.5 text-xs text-inkmuted/70">{timestamp}</p>}
     </div>
   );
 }

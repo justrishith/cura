@@ -1,26 +1,315 @@
 @import "tailwindcss";
 
+/* Organic design tokens (authoritative values from the design-system spec). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --dp-color-ground: #eee6d6;
+  --dp-color-surface: #f5eddf;
+  --dp-color-ink: #29251d;
+  --dp-color-primary: #35422d;
+  --dp-color-field: #694737;
+  --dp-color-art-accent: #ad7d62;
+  --dp-color-surface-muted: #ddd5c3;
+  --dp-color-highlight: #b9b28b;
+  --dp-color-ink-muted: #443b2f;
+  --dp-typography-body: 16px;
+  --dp-border-hairline: 1px;
+  --dp-motion-interaction: 240ms ease;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Typography: Source Serif 4 statements, Instrument Sans reading. */
+  --font-display: var(--font-serif), Georgia, serif;
+  --font-reading: var(--font-sans), system-ui, sans-serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Earth palette */
+  --color-sand: var(--dp-color-ground);
+  --color-paper: var(--dp-color-surface);
+  --color-muted: var(--dp-color-surface-muted);
+  --color-ink: var(--dp-color-ink);
+  --color-inkmuted: var(--dp-color-ink-muted);
+  --color-moss: var(--dp-color-primary);
+  --color-mosshover: #2b3520;
+  --color-clay: var(--dp-color-field);
+  --color-terra: var(--dp-color-art-accent);
+  --color-grass: var(--dp-color-highlight);
+  --color-stone: #cfc6b0;
+  --color-hairline: #d9cfb8;
+
+  /* Semantic tints — earth-toned green / amber / fired-clay red for grades. */
+  --color-ok: #3f5233;
+  --color-oksoft: #e3e8d7;
+  --color-warn: #8a661d;
+  --color-warnsoft: #f0e7ce;
+  --color-danger: #9a3b26;
+  --color-dangersoft: #f2ddd2;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--dp-color-ground);
+  color: var(--dp-color-ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: var(--dp-typography-body);
+}
+
+/* Faint continuous paper grain beneath the content. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.05'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+}
+
+@layer components {
+  /* Organic control radius (authoritative: --dp-radius-control). */
+  .r-ctl {
+    border-radius: 27px 19px 29px 16px / 22px 26px 19px 29px;
+  }
+  /* Raised paper sheet. */
+  .r-sheet {
+    border-radius: 24px 18px 28px 16px / 20px 26px 16px 24px;
+  }
+  /* Panel variant with mirrored curves. */
+  .r-panel {
+    border-radius: 18px 26px 16px 24px / 26px 16px 24px 18px;
+  }
+  /* Facts tray — separate sheet, all four corners different. */
+  .r-tray {
+    border-radius: 30px 12px 22px 34px / 14px 28px 32px 16px;
+  }
+  /* Flat organic silhouettes for decorative forms. */
+  .r-blob-a {
+    border-radius: 58% 42% 37% 63% / 43% 57% 48% 52%;
+  }
+  .r-blob-b {
+    border-radius: 61% 39% 55% 45% / 38% 62% 40% 60%;
+  }
+  .r-blob-c {
+    border-radius: 66% 34% 35% 65% / 40% 66% 34% 60%;
+  }
+}
+
+/* Reduced motion: cut transitions globally; components also gate their own
+   pulses/pings with motion-reduce: variants (per design-system Motion rules). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition: none !important;
+  }
+}
+
+/* ==========================================================================
+   Motion layer — "busts on first look"
+   Springs + choreography keyframes. Everything degrades to static under
+   prefers-reduced-motion (helper classes keep elements visible, animations
+   are killed, and the JS Reveal component sets its shown state immediately).
+   ========================================================================== */
+:root {
+  --ease-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --ease-outsoft: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --- Reveal (scroll/load entrances) --- */
+@keyframes rv-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes rv-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.a-rise {
+  animation: rv-rise 0.7s var(--ease-spring) both;
+}
+.a-rise-in {
+  animation: rv-rise 0.7s var(--ease-spring) both;
+}
+.a-fade {
+  animation: rv-fade 0.5s ease-out both;
+}
+/* Pre-reveal: hidden until the Reveal observer fires */
+.rv-wait {
+  opacity: 0;
+}
+.d-1 { animation-delay: 80ms; }
+.d-2 { animation-delay: 160ms; }
+.d-3 { animation-delay: 240ms; }
+.d-4 { animation-delay: 320ms; }
+.d-5 { animation-delay: 420ms; }
+.d-6 { animation-delay: 520ms; }
+
+/* --- Word-by-word hero mask reveal --- */
+.wv {
+  display: inline-block;
+  animation: wv-rise 0.65s var(--ease-spring) both;
+}
+@keyframes wv-rise {
+  from { opacity: 0; transform: translateY(0.55em) rotate(2deg); }
+  to { opacity: 1; transform: translateY(0) rotate(0deg); }
+}
+
+/* --- Blob choreography (pop in, then drift; per-blob base rotation) --- */
+@keyframes blob-pop {
+  0% { opacity: 0; transform: scale(0.4); }
+  65% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.a-pop {
+  animation: blob-pop 0.7s var(--ease-spring) both;
+}
+@keyframes drift-a {
+  0%, 100% { transform: rotate(3deg) translateY(0); }
+  50% { transform: rotate(-1deg) translateY(-10px); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: rotate(-6deg) translateY(0); }
+  50% { transform: rotate(-9deg) translateY(-14px); }
+}
+@keyframes drift-c {
+  0%, 100% { transform: rotate(12deg) translate(0, 0); }
+  50% { transform: rotate(7deg) translate(6px, -8px); }
+}
+@keyframes drift-d {
+  0%, 100% { transform: rotate(-12deg) translate(0, 0); }
+  50% { transform: rotate(-15deg) translate(-5px, -6px); }
+}
+.drift-a { animation: drift-a 9s ease-in-out infinite; }
+.drift-b { animation: drift-b 11s ease-in-out infinite; }
+.drift-c { animation: drift-c 8s ease-in-out infinite; }
+.drift-d { animation: drift-d 10s ease-in-out infinite; }
+
+/* --- Mic orb: entrance, idle breathe, listening ripples, thinking wobble --- */
+@keyframes orb-pop {
+  0% { opacity: 0; transform: scale(0.45) rotate(-8deg); }
+  65% { opacity: 1; transform: scale(1.07) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+.a-orb-in {
+  animation: orb-pop 0.75s var(--ease-spring) both;
+}
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+.a-breathe {
+  animation: orb-breathe 3.4s ease-in-out infinite;
+}
+@keyframes ripple {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+.a-ripple {
+  animation: ripple 1.7s var(--ease-outsoft) infinite both;
+}
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-3deg); }
+  40% { transform: rotate(2.5deg); }
+  60% { transform: rotate(-1.5deg); }
+  80% { transform: rotate(1deg); }
+}
+.a-wobble {
+  animation: wobble 1.1s ease-in-out infinite;
+}
+
+/* --- Chairs arriving: transcript bubbles, receipts, panels, rows --- */
+@keyframes a-drop-k {
+  0% { opacity: 0; transform: translateY(14px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.a-drop {
+  animation: a-drop-k 0.5s var(--ease-spring) both;
+}
+@keyframes stamp {
+  0% { opacity: 0; transform: scale(1.6) rotate(-6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+.a-stamp {
+  animation: stamp 0.4s var(--ease-spring) both;
+}
+
+/* --- Call offer: glow pulse on the primary action --- */
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(53, 66, 45, 0.00); }
+  50% { box-shadow: 0 0 0 8px rgba(53, 66, 45, 0.18); }
+}
+.a-glow {
+  animation: glow 2.2s ease-in-out infinite;
+}
+
+/* --- Live call strip: mini equalizer --- */
+@keyframes eq {
+  0%, 100% { transform: scaleY(0.55); }
+  50% { transform: scaleY(1); }
+}
+.a-eq {
+  transform-origin: bottom;
+  animation: eq 0.9s ease-in-out infinite alternate;
+}
+
+/* --- Perched mascot: gentle bob --- */
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(-2deg); }
+}
+.a-bob {
+  animation: bob 5.5s ease-in-out infinite;
+}
+
+/* --- Urgent alert wash + crisis avatar ring --- */
+@keyframes wash {
+  0%, 100% { background-color: var(--dp-color-surface); }
+  50% { background-color: #f4e4cf; }
+}
+.a-wash {
+  animation: wash 1.9s ease-in-out infinite;
+}
+@keyframes ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(154, 59, 38, 0.35); }
+  50% { box-shadow: 0 0 0 10px rgba(154, 59, 38, 0.12); }
+}
+.a-ring {
+  animation: ring-pulse 2.1s ease-in-out infinite;
+}
+
+/* --- Tab switch crossfade --- */
+@keyframes tab-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.a-tab {
+  animation: tab-in 0.3s var(--ease-outsoft) both;
+}
+
+/* --- Reduced motion: everything static and visible --- */
+@media (prefers-reduced-motion: reduce) {
+  .a-rise, .a-rise-in, .a-fade, .a-pop, .wv, .a-orb-in, .a-drop, .a-tab {
+    animation: none !important;
+  }
+  .rv-wait, .wv, .a-pop, .a-orb-in {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .a-breathe, .a-ripple, .a-wobble, .a-glow, .a-eq, .a-wash, .a-ring, .a-stamp,
+  .drift-a, .drift-b, .drift-c, .drift-d {
+    animation: none !important;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff;
+    color: #171717;
+  }
+  body::before {
+    display: none;
+  }
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+  }
 }

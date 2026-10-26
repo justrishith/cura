@@ -2,6 +2,8 @@
 
 // Dashboard primitives for the caregiver surface (design.md §4, primitives list).
 // One file, small subcomponents; client because AlertRow acknowledges.
+// Organic dressing: paper sheets on the sand ground, serif person heading,
+// hairline rules, earth-toned semantic chips.
 import { PhoneIncoming, PhoneOutgoing } from "lucide-react";
 import type { Grade, NotificationLevel, RefillStatus } from "@/lib/types";
 import type { ActionReceipt } from "@/lib/types";
@@ -29,26 +31,31 @@ export function StatusHero({ name, age, lastCheckInLabel, grade, summary }: Stat
     .join("")
     .toUpperCase();
   return (
-    <section data-testid="status-hero" className="rounded-2xl border border-slate-200 bg-white p-6">
+    <section
+      data-testid="status-hero"
+      className="a-drop r-tray border border-hairline bg-paper p-6"
+    >
       <div className="flex items-center gap-4">
         <span
           aria-hidden="true"
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-teal-50 text-lg font-bold text-teal-700"
+          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-clay font-display text-lg font-medium text-paper ${
+            grade === "crisis" ? "a-ring motion-reduce:[animation:none]" : ""
+          }`}
         >
           {initials || "?"}
         </span>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">
               {name}
               {age !== undefined && `, ${age}`}
             </h2>
             <GradeBadge grade={grade} />
           </div>
-          <p className="mt-0.5 text-sm text-slate-500">Last check-in {lastCheckInLabel}</p>
+          <p className="mt-0.5 text-sm text-inkmuted">Last check-in {lastCheckInLabel}</p>
         </div>
       </div>
-      {summary && <p className="mt-4 text-base text-slate-700">{summary}</p>}
+      {summary && <p className="mt-4 text-base leading-relaxed text-inkmuted">{summary}</p>}
     </section>
   );
 }
@@ -64,16 +71,17 @@ export interface AlertRowProps {
 }
 
 const ALERT_LEVEL_STYLES: Record<NotificationLevel, string> = {
-  info: "bg-slate-100 text-slate-600",
-  urgent: "bg-amber-50 text-amber-700",
-  crisis: "bg-red-600 text-white",
+  info: "bg-muted text-inkmuted",
+  urgent: "bg-warnsoft text-warn",
+  crisis: "bg-danger text-paper",
 };
 
 export function AlertRow({ level, message, unread = false, acknowledged = false, onAck }: AlertRowProps) {
+  const wash = unread && !acknowledged && (level === "urgent" || level === "crisis");
   return (
     <div
       data-testid={`alert-row-${level}`}
-      className={`flex items-start gap-3 rounded-2xl border bg-white p-4 transition-opacity duration-200 ease-out ${acknowledged ? "border-slate-200 opacity-60" : "border-teal-200"}`}
+      className={`a-drop flex items-start gap-3 rounded-xl border bg-paper p-4 transition-opacity duration-[240ms] ease-out ${acknowledged ? "border-hairline opacity-60" : "border-clay"} ${wash ? "a-wash motion-reduce:[animation:none]" : ""}`}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
@@ -81,16 +89,16 @@ export function AlertRow({ level, message, unread = false, acknowledged = false,
             {level.toUpperCase()}
           </span>
           {unread && (
-            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-teal-600" />
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-moss" />
           )}
         </div>
-        <p className="mt-1.5 text-sm text-slate-700">{message}</p>
+        <p className="mt-1.5 text-sm text-inkmuted">{message}</p>
       </div>
       {onAck && (
         <button
           type="button"
           onClick={onAck}
-          className="min-h-12 inline-flex shrink-0 items-center rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-600 transition-colors duration-200 ease-out hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+          className="r-ctl min-h-12 inline-flex shrink-0 items-center border border-hairline bg-paper px-4 text-sm font-medium text-inkmuted transition-[background-color,transform] duration-[240ms] ease-out hover:bg-muted active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2"
         >
           Got it
         </button>
@@ -110,14 +118,14 @@ export interface CheckInRowProps {
 
 export function CheckInRow({ timeLabel, grade, symptomTags, receipts = [] }: CheckInRowProps) {
   return (
-    <section data-testid="checkin-row" className="border-t border-slate-200 pt-4">
+    <section data-testid="checkin-row" className="a-drop border-t border-hairline pt-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-slate-500">{timeLabel}</span>
+        <span className="text-sm font-medium text-inkmuted">{timeLabel}</span>
         <GradeBadge grade={grade} />
         {symptomTags.map((tag) => (
           <span
             key={tag}
-            className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600"
+            className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-inkmuted"
           >
             {tag}
           </span>
@@ -143,21 +151,21 @@ export interface MedCardProps {
 }
 
 const REFILL_STYLES: Record<RefillStatus, string> = {
-  ok: "bg-green-50 text-green-700",
-  requested: "bg-amber-50 text-amber-700",
-  ordered: "bg-green-50 text-green-800",
+  ok: "bg-oksoft text-ok",
+  requested: "bg-warnsoft text-warn",
+  ordered: "bg-oksoft text-ok",
 };
 
 export function MedCard({ name, dosage, refillStatus }: MedCardProps) {
   return (
-    <section data-testid={`med-card-${refillStatus}`} className="rounded-2xl border border-slate-200 bg-white p-4">
+    <section data-testid={`med-card-${refillStatus}`} className="a-drop r-panel border border-hairline bg-paper p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-base font-semibold text-slate-900">{name}</p>
+        <p className="font-display text-lg font-medium text-ink">{name}</p>
         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${REFILL_STYLES[refillStatus]}`}>
           {refillStatus}
         </span>
       </div>
-      {dosage && <p className="mt-0.5 text-sm text-slate-500">{dosage}</p>}
+      {dosage && <p className="mt-0.5 text-sm text-inkmuted">{dosage}</p>}
     </section>
   );
 }
@@ -173,9 +181,9 @@ export interface CallLogRowProps {
 }
 
 const OUTCOME_STYLES: Record<CallLogRowProps["outcome"], string> = {
-  booked: "bg-green-50 text-green-700",
-  "no-booking": "bg-amber-50 text-amber-700",
-  "urgent-alert": "bg-red-50 text-red-600",
+  booked: "bg-oksoft text-ok",
+  "no-booking": "bg-warnsoft text-warn",
+  "urgent-alert": "bg-dangersoft text-danger",
 };
 
 const OUTCOME_GLYPHS: Record<CallLogRowProps["outcome"], string> = {
@@ -186,21 +194,21 @@ const OUTCOME_GLYPHS: Record<CallLogRowProps["outcome"], string> = {
 
 export function CallLogRow({ direction, destination, outcome, durationText, timeLabel }: CallLogRowProps) {
   return (
-    <section data-testid={`call-log-row-${outcome}`} className="flex items-start gap-3 border-t border-slate-200 py-3">
+    <section data-testid={`call-log-row-${outcome}`} className="flex items-start gap-3 border-t border-hairline py-3">
       {direction === "out" ? (
-        <PhoneOutgoing aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" strokeWidth={1.5} />
+        <PhoneOutgoing aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-moss" strokeWidth={1.5} />
       ) : (
-        <PhoneIncoming aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" strokeWidth={1.5} />
+        <PhoneIncoming aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-inkmuted" strokeWidth={1.5} />
       )}
       <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900">
+        <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
           {direction === "out" ? "Outbound" : "Inbound"} — {destination}
           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${OUTCOME_STYLES[outcome]}`}>
             {OUTCOME_GLYPHS[outcome]}
           </span>
         </p>
         {(durationText || timeLabel) && (
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-inkmuted/70">
             {durationText}
             {durationText && timeLabel ? " · " : ""}
             {timeLabel}

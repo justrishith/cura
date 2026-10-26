@@ -1,6 +1,8 @@
 "use client";
 
 // C7 — escalation pair: offer card → live strip → done card (design.md §4-C7).
+// Organic dressing: serif offer question on a paper sheet; solid moss action;
+// quiet outlined alternative.
 import { CheckCircle2, Phone } from "lucide-react";
 import type { CallOffer } from "@/lib/types";
 
@@ -15,9 +17,9 @@ function elapsedLabel(elapsedSeconds: number) {
 }
 
 const BUTTON_BASE =
-  "min-h-12 inline-flex items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2";
-const PRIMARY = `${BUTTON_BASE} bg-teal-600 text-white hover:bg-teal-700`;
-const GHOST = `${BUTTON_BASE} border border-slate-200 bg-white text-slate-600 hover:bg-slate-50`;
+  "r-ctl min-h-12 inline-flex items-center justify-center gap-2 px-5 text-sm font-semibold transition-[background-color,transform] duration-[240ms] ease-out active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2";
+const PRIMARY = `${BUTTON_BASE} bg-moss text-paper hover:bg-mosshover`;
+const GHOST = `${BUTTON_BASE} border border-hairline bg-paper text-inkmuted hover:bg-muted`;
 
 export function CallStrip(props: CallStripProps) {
   if (props.mode === "offer") {
@@ -25,13 +27,13 @@ export function CallStrip(props: CallStripProps) {
     return (
       <div
         data-testid="call-strip-offer"
-        className="rounded-2xl border border-slate-200 bg-white p-4"
+        className="a-drop r-sheet border border-hairline bg-paper p-5"
       >
-        <p className="text-base font-semibold text-slate-900">
+        <p className="font-display text-lg font-medium leading-snug text-ink">
           This needs a doctor&apos;s eyes. Want me to call {offer.provider} now?
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <button type="button" onClick={onCallNow} className={PRIMARY}>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button type="button" onClick={onCallNow} className={`${PRIMARY} a-glow motion-reduce:[animation:none]`}>
             <Phone aria-hidden="true" className="h-4 w-4" strokeWidth={1.5} />
             Call now
           </button>
@@ -48,14 +50,19 @@ export function CallStrip(props: CallStripProps) {
     return (
       <div
         data-testid="call-strip-live"
-        className="flex items-center gap-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-3"
+        className="a-drop r-panel flex items-center gap-3 border border-ok/30 bg-oksoft px-4 py-3"
       >
-        <span
-          aria-hidden="true"
-          className="h-2.5 w-2.5 shrink-0 rounded-full bg-green-500 animate-pulse motion-reduce:animate-none"
-        />
-        <p className="text-sm font-medium text-green-800">
-          <Phone aria-hidden="true" className="mr-1.5 inline h-4 w-4 align-[-2px]" strokeWidth={1.5} />
+        {/* Mini equalizer — three breathing bars; static under reduced motion. */}
+        <span aria-hidden="true" className="flex h-4 shrink-0 items-end gap-0.5">
+          {[0, 160, 320].map((delay) => (
+            <span
+              key={delay}
+              className="a-eq motion-reduce:[animation:none] h-full w-1 rounded-full bg-ok"
+              style={{ animationDelay: `${delay}ms` }}
+            />
+          ))}
+        </span>
+        <p className="text-sm font-medium text-ok">
           Calling {provider} — {elapsedLabel(elapsedSeconds)} …
         </p>
       </div>
@@ -65,10 +72,10 @@ export function CallStrip(props: CallStripProps) {
   return (
     <div
       data-testid="call-strip-done"
-      className="flex items-center gap-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-3"
+      className="a-drop r-panel flex items-center gap-3 border border-ok/30 bg-oksoft px-4 py-3"
     >
-      <CheckCircle2 aria-hidden="true" className="h-5 w-5 shrink-0 text-green-600" />
-      <p className="text-sm font-medium text-green-800">{props.message}</p>
+      <CheckCircle2 aria-hidden="true" className="h-5 w-5 shrink-0 text-ok" />
+      <p className="text-sm font-medium text-ok">{props.message}</p>
     </div>
   );
 }

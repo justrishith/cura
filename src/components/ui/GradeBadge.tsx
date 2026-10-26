@@ -1,19 +1,20 @@
-// C2 — grade pill per design.md §3 grade table. Server-safe.
+// C2 — grade pill. Earth-toned semantics: low=moss, medium=dried-grass amber,
+// high=fired-clay red, crisis=solid fired clay. Server-safe.
 import type { Grade } from "@/lib/types";
 
 const BADGE_STYLES: Record<Grade, string> = {
-  low: "bg-green-50 text-green-600",
-  medium: "bg-amber-50 text-amber-600",
-  high: "bg-red-50 text-red-600",
-  crisis: "bg-red-600 text-white",
+  low: "bg-oksoft text-ok",
+  medium: "bg-warnsoft text-warn",
+  high: "bg-dangersoft text-danger",
+  crisis: "bg-danger text-paper",
 };
 
 const DOT_STYLES: Record<Grade, string> = {
-  low: "bg-green-600",
-  medium: "bg-amber-600",
-  high: "bg-red-600",
-  // Dot on the filled crisis pill is white so it stays visible.
-  crisis: "bg-white",
+  low: "bg-ok",
+  medium: "bg-warn",
+  high: "bg-danger",
+  // Dot on the filled crisis pill is paper so it stays visible.
+  crisis: "bg-paper",
 };
 
 export type GradeBadgeSize = "sm" | "md";
@@ -27,7 +28,7 @@ export function GradeBadge({ grade, size = "sm" }: { grade: Grade; size?: GradeB
   // CRISIS dot pulses; prefers-reduced-motion swaps the pulse for a static ring.
   const crisisDot =
     grade === "crisis"
-      ? "animate-pulse motion-reduce:animate-none motion-reduce:ring-2 motion-reduce:ring-white/70 motion-reduce:ring-offset-2 motion-reduce:ring-offset-red-600"
+      ? "animate-pulse motion-reduce:animate-none motion-reduce:ring-2 motion-reduce:ring-paper/70 motion-reduce:ring-offset-2 motion-reduce:ring-offset-danger"
       : "";
   return (
     <span

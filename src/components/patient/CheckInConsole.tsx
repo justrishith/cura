@@ -16,9 +16,9 @@ import type { ActionReceipt, AgentTurnResult, CallOffer, Grade } from "@/lib/typ
 const DEMO_HOUSEHOLD_ID = "11111111-1111-1111-1111-111111111111";
 const WAIT_NOTE = "awaiting call outcome…";
 const INPUT_CLASS =
-  "min-h-12 w-full rounded-full border border-slate-200 bg-white px-4 text-base text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2";
+  "r-ctl min-h-12 w-full border border-hairline bg-paper px-4 text-base text-ink placeholder:text-inkmuted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand";
 const SEND_CLASS =
-  "min-h-12 rounded-full bg-teal-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2";
+  "r-ctl min-h-12 bg-moss px-5 text-sm font-semibold text-paper transition-[background-color,transform] duration-[240ms] ease-out hover:bg-mosshover active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand";
 
 type CallFlow =
   | { kind: "offer"; offer: CallOffer } | { kind: "live"; provider: string; sid: string }
@@ -152,30 +152,36 @@ export default function CheckInConsole() {
   const elapsed = call?.kind === "live" ? Math.max(0, Math.floor((Date.now() - callStartedAt) / 1000)) : 0;
 
   return (
-    <div className="min-h-svh bg-slate-50">
+    <div className="min-h-svh bg-sand">
       <CrisisBanner visible={crisis} />
-      <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-8">
+      <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-10">
         <header className="flex items-center justify-between gap-3">
           <CuraMark />
-          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-500">Demo — not medical advice</span>
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-inkmuted">Demo — not medical advice</span>
         </header>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Daily check-in</h1>
-            <p className="text-sm text-slate-500">Just tell Cura how things are.</p>
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">Daily check-in</h1>
+            <p className="mt-0.5 text-sm text-inkmuted">Just tell Cura how things are.</p>
           </div>
           {grade && <GradeBadge grade={grade} size="md" />}
         </div>
         <MicOrb state={orb} onToggle={onOrbToggle} onSwitchToText={() => setTextMode((v) => !v)} />
-        {feed.length === 0 ? <p className="text-base text-slate-400">Tap the orb and say how you&apos;re doing — or switch to text below.</p> : <TranscriptFeed items={feed} />}
-        {orb === "listening" && interim && <p aria-live="polite" className="text-sm italic text-slate-400">…{interim}</p>}
+        {feed.length === 0 ? (
+          <p className="r-sheet border border-hairline bg-paper px-4 py-3 text-base leading-relaxed text-inkmuted">
+            Tap the orb and say how you&apos;re doing — or switch to text below.
+          </p>
+        ) : (
+          <TranscriptFeed items={feed} />
+        )}
+        {orb === "listening" && interim && <p aria-live="polite" className="text-sm italic text-inkmuted/70">…{interim}</p>}
         {receipts.length > 0 && (
-          <section aria-label="What Cura did for you" className="flex flex-wrap gap-3">{receipts.map((r) => <ActionCard key={r.id} receipt={r} />)}</section>
+          <section aria-label="What Cura did for you" className="flex flex-col gap-3">{receipts.map((r, i) => <ActionCard key={r.id} receipt={r} delay={i * 70} />)}</section>
         )}
         {call?.kind === "offer" && <CallStrip mode="offer" offer={call.offer} onCallNow={() => void onCallNow()} onDismiss={onDecline} />}
         {call?.kind === "live" && <CallStrip mode="live" provider={call.provider} elapsedSeconds={elapsed} />}
         {call?.kind === "done" && <CallStrip mode="done" message={call.message} />}
-        {call?.kind === "declined" && <p className="text-sm text-slate-400">Offered to book — declined.</p>}
+        {call?.kind === "declined" && <p className="text-sm text-inkmuted/70">Offered to book — declined.</p>}
         <TextFallback
           open={textMode}
           busy={orb === "thinking"}
@@ -183,8 +189,8 @@ export default function CheckInConsole() {
           onChange={setDraft}
           onSubmit={() => { const m = draft; setDraft(""); void submit(m, false); }}
         />
-        {note && <p className="text-xs text-slate-500">{note}</p>}
-        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        {note && <p className="text-xs text-inkmuted/80">{note}</p>}
+        {error && <p role="alert" className="r-panel border border-danger/30 bg-dangersoft px-3 py-2 text-sm text-danger">{error}</p>}
       </div>
     </div>
   );

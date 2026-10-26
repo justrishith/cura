@@ -1,4 +1,6 @@
 // Dashboard primitive — the caregiver's at-a-glance person card (design.md §4).
+// Organic dressing: tray-sheet with clay avatar + serif name. Kept in sync with
+// the copy living in DashboardPrimitives.tsx (this file is the standalone copy).
 // Server-safe.
 import type { Grade } from "@/lib/types";
 import { GradeBadge } from "./GradeBadge";
@@ -26,26 +28,26 @@ function initialsOf(name: string): string {
 export function StatusHero({ name, age, lastCheckInLabel, grade, summary }: StatusHeroProps) {
   const initials = initialsOf(name);
   return (
-    <section data-testid="status-hero" className="rounded-2xl border border-slate-200 bg-white p-6">
+    <section data-testid="status-hero" className="r-tray border border-hairline bg-paper p-6">
       <div className="flex items-center gap-4">
         <span
           aria-hidden="true"
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-teal-50 text-lg font-bold text-teal-600"
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-clay font-display text-lg font-medium text-paper"
         >
           {initials || "?"}
         </span>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">
               {name}
               {age !== undefined && `, ${age}`}
             </h2>
             <GradeBadge grade={grade} />
           </div>
-          <p className="mt-0.5 text-sm text-slate-500">Last check-in {lastCheckInLabel}</p>
+          <p className="mt-0.5 text-sm text-inkmuted">Last check-in {lastCheckInLabel}</p>
         </div>
       </div>
-      {summary && <p className="mt-4 text-base text-slate-500">{summary}</p>}
+      {summary && <p className="mt-4 text-base leading-relaxed text-inkmuted">{summary}</p>}
     </section>
   );
 }

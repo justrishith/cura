@@ -16,15 +16,15 @@ export interface CheckInRowProps {
 
 export function CheckInRow({ timeLabel, grade, symptomTags, receipts = [] }: CheckInRowProps) {
   return (
-    <section data-testid="checkin-row" className="border-t border-slate-200 pt-4">
+    <section data-testid="checkin-row" className="border-t border-hairline pt-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-slate-500">{timeLabel}</span>
+        <span className="text-sm font-medium text-inkmuted">{timeLabel}</span>
         <GradeBadge grade={grade} />
         {symptomTags.map((tag) => (
           <span
             key={tag}
             data-testid="checkin-row-symptom-tag"
-            className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600"
+            className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-inkmuted"
           >
             {tag}
           </span>

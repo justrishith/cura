@@ -1,11 +1,16 @@
-// C1 — wordmark: lowercase "cura" + teal period (design.md §4-C1).
+// C1 — brand lockup: the cura bird + wordmark (lowercase "cura" + clay period).
+import { CuraBird } from "./CuraBird";
+
 export function CuraMark({ className = "" }: { className?: string }) {
   return (
     <span
       data-testid="cura-mark"
-      className={`text-xl font-bold tracking-tight text-slate-900 select-none ${className}`}
+      className={`inline-flex items-center gap-1.5 select-none ${className}`}
     >
-      cura<span className="text-teal-600">.</span>
+      <CuraBird className="h-6 w-6 shrink-0" />
+      <span className="font-display text-xl font-semibold tracking-tight text-ink">
+        cura<span className="text-clay">.</span>
+      </span>
     </span>
   );
 }

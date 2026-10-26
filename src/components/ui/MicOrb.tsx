@@ -1,7 +1,9 @@
 "use client";
 
-// C3 — the 96px mic orb, hero of the patient console (design.md §4-C3).
-// Pure presentation: no Web Speech logic; onToggle/onSwitchToText come from the parent.
+// C3 — the mic orb, hero of the patient console (design.md §4-C3).
+// Organic silhouette (.r-blob-c) instead of a perfect circle; moss fill when
+// live. Pure presentation: no Web Speech logic; onToggle/onSwitchToText come
+// from the parent.
 import { Loader2, Mic } from "lucide-react";
 
 export type MicOrbState = "idle" | "listening" | "thinking" | "speaking";
@@ -21,10 +23,10 @@ const ARIA_LABELS: Record<MicOrbState, string> = {
 };
 
 const ORB_STYLES: Record<MicOrbState, string> = {
-  idle: "bg-teal-50 text-teal-600",
-  listening: "bg-teal-600 text-white",
-  thinking: "bg-white text-teal-600",
-  speaking: "bg-teal-50 text-teal-600",
+  idle: "bg-paper text-moss",
+  listening: "bg-moss text-paper",
+  thinking: "bg-paper text-clay",
+  speaking: "bg-grass/50 text-ink",
 };
 
 const BAR_CLASSES = ["h-3", "h-6", "h-4", "h-5"];
@@ -45,7 +47,7 @@ function OrbFace({ state }: { state: MicOrbState }) {
         {BAR_CLASSES.map((height, i) => (
           <span
             key={i}
-            className={`w-1.5 animate-pulse motion-reduce:animate-none rounded-full bg-teal-600 ${height} ${BAR_DELAYS[i]}`}
+            className={`w-1.5 animate-pulse motion-reduce:animate-none rounded-full bg-clay ${height} ${BAR_DELAYS[i]}`}
           />
         ))}
       </span>
@@ -55,7 +57,8 @@ function OrbFace({ state }: { state: MicOrbState }) {
 }
 
 function SwitchToText({ onSwitchToText }: { onSwitchToText?: () => void }) {
-  const linkClasses = "font-semibold text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2";
+  const linkClasses =
+    "font-semibold text-clay underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2";
   if (!onSwitchToText) {
     return <span className={linkClasses}>Switch to text</span>;
   }
@@ -82,30 +85,39 @@ export function MicOrb({
         onClick={onToggle}
         aria-label={ARIA_LABELS[state]}
         data-testid={`mic-orb-${state}`}
-        className="group relative h-24 w-24 rounded-full transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+        className="r-blob-c a-orb-in group relative h-28 w-28 transition-colors duration-[240ms] ease-out hover:brightness-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand"
       >
         {state === "listening" && (
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 rounded-full bg-teal-600/30 animate-ping motion-reduce:animate-none motion-reduce:bg-transparent motion-reduce:ring-4 motion-reduce:ring-teal-200"
-          />
+          <>
+            <span
+              aria-hidden="true"
+              className="a-ripple r-blob-c absolute inset-0 border-[3px] border-moss motion-reduce:hidden"
+            />
+            <span
+              aria-hidden="true"
+              className="a-ripple r-blob-c absolute inset-0 border-[3px] border-moss/60 motion-reduce:hidden"
+              style={{ animationDelay: "650ms" }}
+            />
+          </>
         )}
         <span
-          className={`relative flex h-full w-full items-center justify-center rounded-full ${ORB_STYLES[state]} ${state === "thinking" ? "border border-slate-200" : ""}`}
+          className={`r-blob-c relative flex h-full w-full items-center justify-center border border-hairline transition-[background-color] duration-[240ms] ease-out ${ORB_STYLES[state]} ${
+            state === "idle" ? "a-breathe" : ""
+          } ${state === "thinking" ? "a-wobble" : ""}`}
         >
           <OrbFace state={state} />
         </span>
         {state === "listening" && (
           <span
             aria-hidden="true"
-            className="absolute right-1 top-1 h-3 w-3 rounded-full bg-red-600"
+            className="absolute right-2 top-3 h-3 w-3 rounded-full bg-danger"
           />
         )}
       </button>
-      <p data-testid="mic-orb-caption" className="mt-3 text-sm text-slate-500">
+      <p data-testid="mic-orb-caption" className="mt-3 text-sm text-inkmuted">
         {CAPTIONS[state]}
       </p>
-      <p className="mt-1 text-sm text-slate-400">
+      <p className="mt-1 text-sm text-inkmuted/70">
         Prefer typing? <SwitchToText onSwitchToText={onSwitchToText} />
       </p>
     </div>

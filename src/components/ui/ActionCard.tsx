@@ -1,5 +1,6 @@
 // C5 — the agentic receipt (design.md §4-C5). Server-safe presentational card:
 // every fired tool becomes one of these, immediately (design.md §6).
+// Organic dressing: pale sheets (.r-sheet) with a semantic left rule.
 import {
   AlertTriangle,
   Bell,
@@ -41,8 +42,8 @@ function copyFor(receipt: ActionReceipt): CardCopy {
         slot: null,
         message: null,
         Icon: FileText,
-        border: "border-l-teal-600",
-        chip: "bg-teal-50 text-teal-600",
+        border: "border-l-moss",
+        chip: "bg-oksoft text-ok",
       };
     case "check_meds":
       return {
@@ -50,8 +51,8 @@ function copyFor(receipt: ActionReceipt): CardCopy {
         slot: null,
         message: null,
         Icon: ListChecks,
-        border: "border-l-teal-600",
-        chip: "bg-teal-50 text-teal-600",
+        border: "border-l-moss",
+        chip: "bg-oksoft text-ok",
       };
     case "request_refill":
       return {
@@ -59,8 +60,8 @@ function copyFor(receipt: ActionReceipt): CardCopy {
         slot: null,
         message: null,
         Icon: Pill,
-        border: "border-l-amber-600",
-        chip: "bg-amber-50 text-amber-600",
+        border: "border-l-warn",
+        chip: "bg-warnsoft text-warn",
       };
     case "book_appointment":
       return {
@@ -68,8 +69,8 @@ function copyFor(receipt: ActionReceipt): CardCopy {
         slot: stringPayload(payload, "slot"),
         message: null,
         Icon: CalendarCheck,
-        border: "border-l-green-600",
-        chip: "bg-green-50 text-green-600",
+        border: "border-l-ok",
+        chip: "bg-oksoft text-ok",
       };
     case "notify_caregiver":
       return payload.level === "urgent" || payload.level === "crisis"
@@ -78,16 +79,16 @@ function copyFor(receipt: ActionReceipt): CardCopy {
             slot: null,
             message: stringPayload(payload, "message"),
             Icon: Bell,
-            border: "border-l-red-600",
-            chip: "bg-red-50 text-red-600",
+            border: "border-l-danger",
+            chip: "bg-dangersoft text-danger",
           }
         : {
             title: "Caregiver notified",
             slot: null,
             message: stringPayload(payload, "message"),
             Icon: Bell,
-            border: "border-l-slate-400",
-            chip: "bg-slate-100 text-slate-600",
+            border: "border-l-stone",
+            chip: "bg-muted text-inkmuted",
           };
     case "crisis_alert":
       return {
@@ -95,8 +96,8 @@ function copyFor(receipt: ActionReceipt): CardCopy {
         slot: null,
         message: stringPayload(payload, "message"),
         Icon: AlertTriangle,
-        border: "border-l-red-600",
-        chip: "bg-red-50 text-red-600",
+        border: "border-l-danger",
+        chip: "bg-dangersoft text-danger",
       };
     case "schedule_telephone_call":
       return {
@@ -104,8 +105,8 @@ function copyFor(receipt: ActionReceipt): CardCopy {
         slot: null,
         message: null,
         Icon: Phone,
-        border: "border-l-teal-600",
-        chip: "bg-teal-50 text-teal-600",
+        border: "border-l-moss",
+        chip: "bg-oksoft text-ok",
       };
     case "finalize_checkin":
       return {
@@ -113,16 +114,16 @@ function copyFor(receipt: ActionReceipt): CardCopy {
         slot: null,
         message: null,
         Icon: CheckCircle2,
-        border: "border-l-slate-400",
-        chip: "bg-slate-100 text-slate-600",
+        border: "border-l-stone",
+        chip: "bg-muted text-inkmuted",
       };
   }
 }
 
 const STATUS_STYLES: Record<ToolStatus, string> = {
-  succeeded: "bg-green-50 text-green-600",
-  scheduled: "bg-amber-50 text-amber-600",
-  failed: "bg-red-50 text-red-600",
+  succeeded: "bg-oksoft text-ok",
+  scheduled: "bg-warnsoft text-warn",
+  failed: "bg-dangersoft text-danger",
 };
 
 const STATUS_GLYPHS: Record<ToolStatus, string> = {
@@ -151,9 +152,11 @@ export interface ActionCardProps {
   muted?: boolean;
   /** Relative-time label (e.g. "2 min ago"); falls back to a hydration-safe "HH:MM". */
   timeLabel?: string;
+  /** Stagger offset in ms for the mount drop animation. */
+  delay?: number;
 }
 
-export function ActionCard({ receipt, entering = false, muted = false, timeLabel }: ActionCardProps) {
+export function ActionCard({ receipt, entering = false, muted = false, timeLabel, delay = 0 }: ActionCardProps) {
   const { tool, status, createdAt } = receipt;
   const { title, slot, message, Icon, border, chip } = copyFor(receipt);
   const time = timeLabel ?? createdAt.slice(11, 16); // deterministic "HH:MM", hydration-safe
@@ -163,9 +166,10 @@ export function ActionCard({ receipt, entering = false, muted = false, timeLabel
       {entering && <style>{ENTER_CSS}</style>}
       <div
         data-testid={`action-card-${tool}`}
-        className={`rounded-xl border border-slate-200 ${entering ? "cura-entering" : ""} ${
-          muted ? `bg-slate-50 p-3 text-sm ${border}` : `bg-white p-4 border-l-4 ${border}`
+        className={`r-sheet border border-hairline a-drop ${entering ? "cura-entering" : ""} ${
+          muted ? `bg-paper p-3 text-sm ${border}` : `bg-paper p-4 border-l-4 ${border}`
         }`}
+        style={delay ? { animationDelay: `${delay}ms` } : undefined}
       >
         <div className="flex items-start gap-3">
           <span
@@ -176,21 +180,21 @@ export function ActionCard({ receipt, entering = false, muted = false, timeLabel
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className={`font-semibold ${muted ? "text-sm" : ""} text-slate-900`}>{title}</p>
+              <p className={`font-semibold ${muted ? "text-sm" : ""} text-ink`}>{title}</p>
               <span
-                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[status]}`}
+                className={`a-stamp inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[status]}`}
               >
                 {STATUS_GLYPHS[status]} {status}
               </span>
             </div>
             {slot && (
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-inkmuted">
                 <Calendar aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.5} />
                 {slot}
               </p>
             )}
-            {message && <p className="mt-1 text-sm text-slate-600">{message}</p>}
-            <p className="mt-1 text-xs text-slate-400">
+            {message && <p className="mt-1 text-sm text-inkmuted">{message}</p>}
+            <p className="mt-1 text-xs text-inkmuted/70">
               {tool} · {time}
             </p>
           </div>

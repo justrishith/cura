@@ -13,9 +13,9 @@ export interface AlertRowProps {
 }
 
 const LEVEL_STYLES: Record<NotificationLevel, string> = {
-  info: "bg-slate-100 text-slate-600",
-  urgent: "bg-amber-50 text-amber-600",
-  crisis: "bg-red-600 text-white",
+  info: "bg-muted text-inkmuted",
+  urgent: "bg-warnsoft text-warn",
+  crisis: "bg-danger text-paper",
 };
 
 const LEVEL_LABELS: Record<NotificationLevel, string> = {
@@ -25,10 +25,11 @@ const LEVEL_LABELS: Record<NotificationLevel, string> = {
 };
 
 export function AlertRow({ level, message, unread = false, onAck }: AlertRowProps) {
+  const wash = unread && (level === "urgent" || level === "crisis");
   return (
     <div
       data-testid={`alert-row-${level}`}
-      className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4"
+      className={`a-drop flex items-start gap-3 r-panel border border-hairline bg-paper p-4 ${wash ? "a-wash" : ""}`}
     >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -41,18 +42,18 @@ export function AlertRow({ level, message, unread = false, onAck }: AlertRowProp
             <span
               aria-hidden="true"
               data-testid="alert-row-unread-dot"
-              className="h-2 w-2 rounded-full bg-teal-600"
+            className="h-2 w-2 rounded-full bg-moss"
             />
           )}
         </div>
-        <p className="mt-1.5 text-sm text-slate-700">{message}</p>
+        <p className="mt-1.5 text-sm text-inkmuted">{message}</p>
       </div>
       {onAck && (
         <button
           type="button"
           onClick={onAck}
           data-testid="alert-row-ack"
-          className="min-h-12 inline-flex shrink-0 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-colors duration-200 ease-out hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+          className="r-ctl min-h-12 inline-flex shrink-0 items-center border border-hairline bg-paper px-4 text-sm font-medium text-inkmuted transition-[background-color,transform] duration-[240ms] ease-out hover:bg-muted active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2"
         >
           Got it
         </button>

@@ -56,6 +56,8 @@ export interface Checkin {
   grade: Grade;
   summaryText: string | null;
   thread: { role: "cura" | "patient"; text: string }[];
+  /** Gemini Interactions API id — chained with previous_interaction_id across turns. */
+  interactionId?: string | null;
   startedAt: string; // ISO
 }
 

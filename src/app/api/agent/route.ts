@@ -1,201 +1,181 @@
-// /api/agent — THE stateless pipeline. One POST = one conversation turn:
-// crisis prescreen → Gemini tool loop (≤3 rounds) → tier enforcement → persist → reply.
-// Response shape: AgentTurnResult (src/lib/types.ts). Server-only.
-import { NextResponse } from "next/server";
-import type { AgentTurnInput, AgentTurnResult, CallOffer } from "@/lib/types";
-import { preScreenCrisis, CRISIS_PATIENT_SCRIPT, CRISIS_GRADE } from "@/lib/crisis";
-import { createInteraction, sendFunctionResults } from "@/lib/gemini";
-import { TOOL_DECLARATIONS, executeToolCall, type ToolExecResult } from "@/lib/tools";
+// api/agent — THE stateless agent endpoint. One request = one full check-in turn.
+// Order of operations per ARCHITECTURE.md:
+//   1. persist patient turn
+//   2. crisis.ts regex prescreen → scripted crisis path (NO LLM)
+//   3. Gemini Interactions loop (≤3 iterations of tool calls, server-executed)
+//   4. tier enforcement (server ensures HIGH ⇒ caregiver notified)
+//   5. persist receipts + thread + interactionId, return AgentTurnResult
+
+import { NextRequest, NextResponse } from "next/server";
 import { getStore, DEMO_HOUSEHOLD_ID } from "@/lib/store";
-import { triggerCall } from "@/lib/telephony";
+import { preScreenCrisis, CRISIS_PATIENT_SCRIPT } from "@/lib/crisis";
+import {
+  createInteraction,
+  functionResultStep,
+  hasGeminiKey,
+  type AgentStep,
+} from "@/lib/gemini";
+import {
+  CURA_TOOLS,
+  ensureTierReceipts,
+  executeProposedCall,
+  runCrisisPath,
+  type ProposedCall,
+} from "@/lib/tools";
+import type { AgentTurnInput, AgentTurnResult, CallOffer, Grade, Medication, Appointment } from "@/lib/types";
 
-const MAX_TOOL_ROUNDS = 3;
+const PATIENT_NAME = "Maria";
 
-function systemInstruction(h: { patientName: string; medsSummary: string; slotsSummary: string }): string {
+function buildSystemPrompt(householdName: string, meds: Medication[], openSlots: Appointment[]): string {
+  const medsLine = meds
+    .map((m) => `${m.name} — ${m.dosage ?? ""} (refill: ${m.refillStatus})`)
+    .join("; ");
+  const slots = openSlots
+    .map((a) => `${a.provider}: ${new Date(a.slot).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`)
+    .join(" | ");
+
   return [
-    `You are Cura, a warm, plain-spoken (9th-grade-or-easier, short sentences) AI companion doing a periodic WELLNESS CHECK-IN for ${h.patientName}, an older adult managing health at home.`,
-    "You are NOT a doctor. Never diagnose, never mention dosages, never give medical instructions beyond general encouragement. Serious, worsening, or persistent symptoms get routed to a real clinician — that's what the tools are for.",
-    "Tone: kind, unhurried, respectful. One to three short sentences per turn. A friendly nurse at the clinic front desk, not a chatbot.",
-    "Never speculate on emergency symptoms; stay calm and end the turn — the scripted safety layer covers emergencies.",
-    `Facts you may use — Medications: ${h.medsSummary}. Open appointment slots: ${h.slotsSummary}.`,
-    "Tool policy:",
-    "- Log every notable symptom with log_symptom.",
-    "- If medication is running out or was missed: check_meds, then request_refill.",
-    "- If symptoms sound concerning (new + several days, or she sounds frightened): offer the doctor visit in words — 'Want me to call the doctor's office and get you on their calendar?' — and ONLY if she says yes, call schedule_telephone_call with purpose=clinic_booking.",
-    "- notify_caregiver for anything medium-or-worse.",
-    "- ALWAYS end the turn by calling finalize_checkin (grade low/medium/high + short spoken summary).",
-    "Grades: low = ordinary life; medium = new/worsening symptom worth a doctor soon; high = needs action today (refill, or she agreed to the phone call).",
+    `You are Cura, a warm automated care assistant for ${householdName}. You are talking to Maria, age 72.`,
+    `You run a DAILY CHECK-IN. Your job: sound human, notice how she is, take helpful actions, and grade how she is doing.`,
+    `Tone: plain English at an 8th-grade level, warm, short (under 60 words per reply — it is spoken aloud to an older adult). Never mention that you follow rules.`,
+    `HARD RULES:`,
+    `- You are NOT a doctor. Never diagnose, never give dosage or treatment advice. Route care: log it, tell the caregiver, book appointments, get a human involved.`,
+    `- Never say "that's probably fine". If something could be serious, escalate.`,
+    `- If she mentions emergency symptoms, stay calm and say you've alerted her caregiver and read the on-screen banner about calling 911.`,
+    `TOOLS: use them freely. Always call log_symptom for anything she reports. Always call submit_checkin_grade before finishing your final reply (grade: low = routine wellbeing, medium = light action needed soon, high = needs doctor-level attention today).`,
+    `If she says she ran out of medication or is low on pills, use request_refill.`,
+    `If the grade is high or medium and relevant, book_appointment and/or notify_caregiver.`,
+    `HER MEDS: ${medsLine}`,
+    `OPEN SLOTS: ${slots || "none today"}`,
   ].join("\n");
 }
 
-function summaries(store: ReturnType<typeof getStore>) {
-  return { store };
-}
-
-function flattenHistory(input: AgentTurnInput): string {
-  const t = input.history
-    .slice(-8)
-    .map((x) => `${x.role === "patient" ? "Patient" : "Cura"}: ${x.text}`)
-    .join("\n");
-  return t
-    ? `Conversation so far:\n${t}\n\nLatest patient message: "${input.message}"`
-    : `Latest patient message: "${input.message}"`;
-}
-
-async function ensureCheckin(input: AgentTurnInput) {
-  const store = getStore();
-  if (input.checkinId) {
-    const existing = await store.getCheckin(input.checkinId);
-    if (existing && existing.householdId === input.householdId) return existing;
+function turnReplyFallback(grade: Grade): string {
+  switch (grade) {
+    case "high":
+      return "Thank you for telling me — I want a doctor to hear this in person, and your caregiver is being pinged right now.";
+    case "medium":
+      return "Thanks — I've noted it and taken care of the details.";
+    case "crisis":
+      return CRISIS_PATIENT_SCRIPT;
+    default:
+      return "Thank you for checking in with me. Rest well — I'll call again tomorrow.";
   }
-  return store.createCheckin({ householdId: input.householdId });
 }
 
-function receiptsAreHealthy(r: { status: string }) {
-  return r.status === "succeeded" || r.status === "scheduled";
-}
-
-export async function POST(req: Request) {
-  let input: AgentTurnInput;
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    input = (await req.json()) as AgentTurnInput;
-  } catch {
-    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
-  }
-  const message = String(input.message ?? "").trim();
-  if (!message) return NextResponse.json({ error: "message required" }, { status: 400 });
-
-  const store = getStore();
-  const hhId = (await store.getHousehold(input.householdId)) ? input.householdId : DEMO_HOUSEHOLD_ID;
-  const hh = await store.getHousehold(hhId);
-  if (!hh) return NextResponse.json({ error: "unknown household" }, { status: 404 });
-
-  // ── 1) Crisis prescreen — deterministic, before any model call (RULES.md)
-  const crisis = preScreenCrisis(message);
-  if (crisis) {
-    const checkin = await ensureCheckin(input);
-    await store.updateCheckin(checkin.id, {
-      grade: CRISIS_GRADE,
-      summaryText: CRISIS_PATIENT_SCRIPT,
-      thread: [...checkin.thread, { role: "patient", text: message }, { role: "cura", text: CRISIS_PATIENT_SCRIPT }],
-    });
-    const alert = await store.addAction({ checkinId: checkin.id, tool: "crisis_alert", status: "succeeded", payload: { category: crisis.category } });
-    await store.createNotification({
-      householdId: hhId,
-      checkinId: checkin.id,
-      level: "crisis",
-      message: `Crisis alert (${crisis.category}) — auto-call placed to the emergency contact line.`,
-    });
-    const call = await triggerCall(hhId, "crisis_outreach", crisis.category).catch(() => null);
-
-    const result: AgentTurnResult = {
-      reply: CRISIS_PATIENT_SCRIPT,
-      grade: "crisis",
-      receipts: [alert],
-      checkinId: checkin.id,
-      callOffer: null,
-      crisis: true,
-    };
-    void call;
-    return NextResponse.json(result);
-  }
-
-  // ── 2) Gemini tool loop (≤3 rounds)
-  const medsSummary =
-    (await store.getMedications(hhId))
-      .map((m) => `${m.name} (${m.dosage ?? ""}, refill ${m.refillStatus})`.trim())
-      .join("; ") || "none on file";
-  const slots = await store.getOpenAppointments(hhId);
-  const slotsSummary =
-    slots.map((s) => new Date(s.slot).toLocaleString("en-US", { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })).join(" | ") || "none";
-  const sys = systemInstruction({ patientName: "Maria", medsSummary, slotsSummary });
-
-  const checkin = await ensureCheckin(input);
-  const receipts: AgentTurnResult["receipts"] = [];
-  let grade: AgentTurnResult["grade"] = "low";
-  let summary: string | null = null;
-  let reply: string | null = null;
-  let callFired = false;
-
-  try {
-    let exchange = await createInteraction({
-      input: flattenHistory({ ...input, householdId: hhId }),
-      tools: TOOL_DECLARATIONS,
-      systemInstruction: sys,
-    });
-
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      if (exchange.calls.length === 0) break;
-      const results: ToolExecResult[] = [];
-      for (const call of exchange.calls) {
-        const r = await executeToolCall(hhId, checkin.id, call.name, call.arguments);
-        results.push(r);
-        if (r.receipt && receiptsAreHealthy(r.receipt)) receipts.push(r.receipt);
-        if (r.wantsCall && !callFired) {
-          callFired = true;
-          const trigger = await triggerCall(hhId, "clinic_booking", "").catch(() => null);
-          void trigger;
-        }
-      }
-      const final = results.find((r) => r.whole);
-      if (final) {
-        if (final.grade) grade = final.grade;
-        if (final.summary) summary = final.summary;
-        reply = final.summary ?? final.text;
-        break;
-      }
-      if (exchange.interactionId == null) break;
-      exchange = await sendFunctionResults({
-        previousInteractionId: exchange.interactionId,
-        results: exchange.calls.map((c, i) => ({ name: c.name, callId: c.callId, text: results[i]?.text ?? "ok" })),
-        tools: TOOL_DECLARATIONS,
-        systemInstruction: sys,
-      });
+    const body = (await req.json().catch(() => ({}))) as Partial<AgentTurnInput>;
+    const message = (body.message ?? "").toString().trim();
+    if (!message) {
+      return NextResponse.json({ error: "message is required" }, { status: 400 });
     }
 
-    if (reply == null) reply = exchange.text ?? "Okay — noted. Anything else on your mind today?";
-    if (summary == null) summary = reply;
+    const store = getStore();
+    const householdId = body.householdId ?? DEMO_HOUSEHOLD_ID;
+    const household = await store.getHousehold(householdId);
+    if (!household) {
+      return NextResponse.json({ error: "household not found" }, { status: 404 });
+    }
 
-    // Tier enforcement (deterministic bumps, server-side):
-    if (grade === "low" && callFired) grade = "high";
-    if (grade === "low" && receipts.some((r) => r.tool === "request_refill")) grade = "medium";
-    if (grade === "medium" && receipts.some((r) => r.tool === "schedule_telephone_call")) grade = "high";
-  } catch (err) {
-    const degraded = err instanceof Error ? err.message : "unknown";
-    const thread = [...input.history.slice(-6), { role: "patient" as const, text: message }];
+    let checkin = body.checkinId ? await store.getCheckin(body.checkinId) : null;
+    if (!checkin) checkin = await store.createCheckin({ householdId });
+    const ctx = { householdId, checkin, patientName: PATIENT_NAME };
+
+    // 1) persist the patient's turn
+    const thread = [...checkin.thread, { role: "patient" as const, text: message }];
     await store.updateCheckin(checkin.id, { thread });
-    return NextResponse.json({
-      reply:
-        "I hit a small snag reaching my notes, but nothing urgent in what you said. Let's pick this up in a minute — anything else to tell me?",
-      grade: "low",
+
+    let receipts: AgentTurnResult["receipts"] = [];
+    let grade: Grade = (await store.getCheckin(checkin.id))?.grade ?? "low";
+    let reply = "";
+    let crisisFired = false;
+
+    // 2) deterministic crisis path — ALWAYS before any model call
+    const crisisHit = preScreenCrisis(message);
+    if (crisisHit) {
+      receipts = await runCrisisPath(crisisHit.category, ctx);
+      grade = "crisis";
+      crisisFired = true;
+      reply = CRISIS_PATIENT_SCRIPT;
+    } else if (!hasGeminiKey()) {
+      // 2b) demo brain without a key: record quietly so flows stay demoable
+      reply =
+        "Got it — noted for the family. This is offline demo mode: add the Gemini key to .env.local to hear my real voice.";
+      grade = "low";
+    } else {
+      // 3) Gemini Interactions loop — server-executed tools, max 3 iterations
+      const systemInstruction = buildSystemPrompt(
+        household.name,
+        await store.getMedications(householdId),
+        await store.getOpenAppointments(householdId)
+      );
+      let interaction = null;
+      let prevId: string | null = checkin.interactionId ?? null;
+      let pendingResults: unknown[] = [];
+
+      for (let iteration = 0; iteration < 3; iteration += 1) {
+        interaction = await createInteraction({
+          input: iteration === 0 ? message : pendingResults,
+          tools: CURA_TOOLS,
+          systemInstruction,
+          previousId: prevId,
+        });
+        prevId = interaction.id;
+        await store.updateCheckin(checkin.id, { interactionId: interaction.id });
+
+        if (interaction.functionCalls.length === 0) break;
+
+        pendingResults = [];
+        for (const step of interaction.functionCalls as AgentStep[]) {
+          const call: ProposedCall = {
+            name: step.name as ProposedCall["name"],
+            args: step.arguments ?? {},
+            callId: step.id,
+          };
+          const receipt = await executeProposedCall(call, ctx);
+          if (receipt) receipts.push(receipt);
+          pendingResults.push(
+            functionResultStep(call.name, call.callId ?? "", JSON.stringify(receipt ? { status: receipt.status } : { ok: true }))
+          );
+        }
+        receipts = receipts; // accumulated above in-place
+      }
+
+      grade = (await store.getCheckin(checkin.id))?.grade ?? grade;
+      reply = (interaction?.outputText ?? "").trim() || turnReplyFallback(grade);
+    }
+
+    // 4) tier enforcement after the model loop (HIGH ⇒ caregiver notified, etc.)
+    const missing = await ensureTierReceipts(grade, ctx);
+    receipts = [...receipts, ...missing];
+
+    grade = (await store.getCheckin(checkin.id))?.grade ?? grade;
+    reply = reply.trim() || turnReplyFallback(grade);
+
+    // 5) persist cura turn + summary, then respond
+    const finalThread = [...(thread ?? []), { role: "cura" as const, text: reply }];
+    await store.updateCheckin(checkin.id, { thread: finalThread, summaryText: reply });
+
+    const callOffer: CallOffer | null =
+      grade === "high" && !crisisFired
+        ? { type: "clinic_booking", provider: "Dr. Chen's office" }
+        : null;
+
+    const result: AgentTurnResult = {
+      reply,
+      grade,
       receipts,
       checkinId: checkin.id,
-      callOffer: null,
-      crisis: false,
-      degraded,
-    } satisfies AgentTurnResult & { degraded?: string });
+      callOffer,
+      crisis: crisisFired,
+    };
+    return NextResponse.json(result);
+  } catch (err) {
+    console.error("[api/agent] turn failed:", err);
+    return NextResponse.json(
+      { error: "Agent turn failed", detail: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
+    );
   }
-
-  // ── 3) Persist the turn + tier outputs
-  await store.updateCheckin(checkin.id, {
-    grade,
-    summaryText: summary,
-    thread: [...input.history.slice(-6), { role: "patient", text: message }, { role: "cura", text: summary }],
-  });
-
-  if (grade === "medium" || grade === "high") {
-    await store.createNotification({
-      householdId: hhId,
-      checkinId: checkin.id,
-      level: grade === "high" ? "urgent" : "info",
-      message: `${hh.name}: check-in graded ${grade.toUpperCase()} — ${summary ?? ""}`,
-    });
-  }
-
-  void summaries(store);
-  const callOffer: CallOffer | null =
-    !callFired && grade === "high" ? { type: "clinic_booking", provider: "Dr. Chen's office" } : null;
-
-  const result: AgentTurnResult = { reply, grade, receipts, checkinId: checkin.id, callOffer, crisis: false };
-  return NextResponse.json(result);
 }

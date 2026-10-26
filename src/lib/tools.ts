@@ -1,42 +1,253 @@
-// tools.ts — Gemini function declarations + executors against CuraStore (parallel-session).
-// Server-only. Every executed tool persists an ActionReceipt so the dashboard + UI show it.
-import { getStore, DEMO_HOUSEHOLD_ID } from "@/lib/store";
-import type { ToolFunction } from "@/lib/gemini";
-import type { ActionReceipt, Grade, Medication, ToolName, ToolStatus } from "@/lib/types";
+// tools.ts — tool implementations + tier orchestration. SERVER-ONLY.
+// The model only *proposes* tool calls; this file executes them through store.ts
+// and enforces tier-required receipts deterministically (PRD grade→action map).
 
-export type ToolExecResult = {
-  /** Compact result text fed back to the model. */
-  text: string;
-  /** Persisted receipt (already written to the store). */
-  receipt?: ActionReceipt;
-  /** finalize_checkin carries the terminal grade + spoken close-out. */
-  grade?: Grade;
-  summary?: string;
-  whole?: boolean;
-  /** schedule_telephone_call: route fires the actual triggerCall with this. */
-  wantsCall?: "clinic_booking";
+import type {
+  ActionReceipt,
+  Checkin,
+  Grade,
+  ToolName,
+  ToolStatus,
+} from "./types";
+import { getStore } from "./store";
+import { fireOutboundCall } from "./telephony";
+
+/** What the model proposes: a tool call parsed from an Interactions step. */
+export interface ProposedCall {
+  name: ToolName | "submit_checkin_grade";
+  args: Record<string, unknown>;
+  callId?: string;
+}
+
+export interface ExecutionContext {
+  householdId: string;
+  checkin: Checkin;
+  patientName: string;
+}
+
+const SEVERITY_MAP: Record<string, Grade> = {
+  mild: "low",
+  low: "low",
+  moderate: "medium",
+  medium: "medium",
+  severe: "high",
+  high: "high",
+  critical: "crisis",
+  crisis: "crisis",
 };
 
-const label = (slot: string) =>
-  new Date(slot).toLocaleString("en-US", {
-    weekday: "long",
+function normGrade(v: unknown): Grade {
+  const key = typeof v === "string" ? v.toLowerCase() : "";
+  return SEVERITY_MAP[key] ?? "low";
+}
+
+function str(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function slotReadable(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("en-US", {
+    weekday: "short",
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
   });
+}
 
-export const TOOL_DECLARATIONS: ToolFunction[] = [
+/** Execute one proposed call. Returns a receipt for real tools; null for control calls. */
+export async function executeProposedCall(
+  call: ProposedCall,
+  ctx: ExecutionContext
+): Promise<ActionReceipt | null> {
+  const store = getStore();
+
+  switch (call.name) {
+    case "log_symptom": {
+      const description = str(call.args.description) || "reported discomfort";
+      const ev = await store.addSymptomEvent({
+        checkinId: ctx.checkin.id,
+        description,
+        severity: normGrade(call.args.severity),
+      });
+      return store.addAction({
+        checkinId: ctx.checkin.id,
+        tool: "log_symptom",
+        payload: { description: ev.description, severity: ev.severity },
+      });
+    }
+
+    case "check_meds": {
+      const meds = await store.getMedications(ctx.householdId);
+      return store.addAction({
+        checkinId: ctx.checkin.id,
+        tool: "check_meds",
+        payload: {
+          meds: meds.map((m) => `${m.name} (${m.refillStatus})`).join("; "),
+        },
+      });
+    }
+
+    case "request_refill": {
+      const meds = await store.getMedications(ctx.householdId);
+      const needle = str(call.args.med_name).toLowerCase();
+      const med =
+        meds.find((m) => m.name.toLowerCase().includes(needle)) ??
+        meds.find((m) => m.refillStatus === "ok");
+      if (!med) {
+        return store.addAction({
+          checkinId: ctx.checkin.id,
+          tool: "request_refill",
+          status: "failed" as ToolStatus,
+          payload: { error: "no matching medication" },
+        });
+      }
+      await store.setRefillStatus(med.id, "requested");
+      return store.addAction({
+        checkinId: ctx.checkin.id,
+        tool: "request_refill",
+        payload: { med: med.name, dosage: med.dosage ?? "", refill_status: "requested" },
+      });
+    }
+
+    case "book_appointment": {
+      const open = await store.getOpenAppointments(ctx.householdId);
+      const prefProvider = str(call.args.provider).toLowerCase();
+      const apt =
+        open.find((a) => a.provider.toLowerCase().includes(prefProvider)) ?? open[0];
+      if (!apt) {
+        return store.addAction({
+          checkinId: ctx.checkin.id,
+          tool: "book_appointment",
+          status: "failed" as ToolStatus,
+          payload: { error: "no open slots" },
+        });
+      }
+      const booked = await store.bookAppointment(apt.id, "web");
+      return store.addAction({
+        checkinId: ctx.checkin.id,
+        tool: "book_appointment",
+        status: booked ? "succeeded" : "failed",
+        payload: {
+          provider: apt.provider,
+          slot: slotReadable(apt.slot),
+          slot_iso: apt.slot,
+        },
+      });
+    }
+
+    case "notify_caregiver": {
+      const level = str(call.args.level) === "info" ? "info" : "urgent";
+      const message = str(call.args.message) || `${ctx.patientName} needs attention.`;
+      await store.createNotification({
+        householdId: ctx.householdId,
+        checkinId: ctx.checkin.id,
+        level,
+        message,
+      });
+      return store.addAction({
+        checkinId: ctx.checkin.id,
+        tool: "notify_caregiver",
+        payload: { level, message },
+      });
+    }
+
+    case "crisis_alert": {
+      await store.createNotification({
+        householdId: ctx.householdId,
+        checkinId: ctx.checkin.id,
+        level: "crisis",
+        message: str(call.args.message) || `Emergency concern reported: ${str(call.args.concern)}`,
+      });
+      await fireOutboundCall("crisis_outreach", ctx.householdId, {
+        patientName: ctx.patientName,
+        concern: str(call.args.concern),
+      });
+      return store.addAction({
+        checkinId: ctx.checkin.id,
+        tool: "crisis_alert",
+        payload: { concern: str(call.args.concern), outreach: "fired" },
+      });
+    }
+
+    case "submit_checkin_grade": {
+      const grade = normGrade(call.args.grade) === "low" && call.args.grade === "low"
+        ? "low"
+        : normGrade(call.args.grade);
+      await store.updateCheckin(ctx.checkin.id, { grade });
+      // control tool: no ActionCard receipt
+      return null;
+    }
+
+    default:
+      return null;
+  }
+}
+
+/** Server-side tier enforcement — the grade map from PRD, applied AFTER the model loop. */
+export async function ensureTierReceipts(
+  grade: Grade,
+  ctx: ExecutionContext
+): Promise<ActionReceipt[]> {
+  const store = getStore();
+  const existing = await store.getActionsForCheckin(ctx.checkin.id);
+  const missing: ActionReceipt[] = [];
+
+  if (grade === "high") {
+    const hasNotify = existing.some((a) => a.tool === "notify_caregiver");
+    if (!hasNotify) {
+      const pushed = await executeProposedCall(
+        {
+          name: "notify_caregiver",
+          args: {
+            level: "urgent",
+            message: `${ctx.patientName}'s check-in was graded urgent — please check in on her.`,
+          },
+        },
+        ctx
+      );
+      if (pushed) missing.push(pushed);
+    }
+  }
+  return missing.filter((a): a is ActionReceipt => Boolean(a));
+}
+
+/**
+ * Deterministic crisis path — runs in /api/agent BEFORE any model call.
+ * Scripted reply (never generated), receipt, notification, emergency-contact call.
+ */
+export async function runCrisisPath(
+  concern: string,
+  ctx: ExecutionContext
+): Promise<ActionReceipt[]> {
+  const store = getStore();
+  const receipts: ActionReceipt[] = [];
+  await store.updateCheckin(ctx.checkin.id, { grade: "crisis" });
+  const alert = await executeProposedCall(
+    { name: "crisis_alert", args: { concern, message: `Possible ${concern}. Immediate attention requested.` } },
+    ctx
+  );
+  if (alert) receipts.push(alert);
+  return receipts;
+}
+
+/** Function declarations sent to Gemini each interaction — wire format per Interactions API. */
+export const CURA_TOOLS: unknown[] = [
   {
     type: "function",
     name: "log_symptom",
-    description:
-      "Log a symptom the patient reported, graded by impact on daily life. Not a diagnosis.",
+    description: "Record a symptom the patient reported during this check-in. Call this whenever she describes how she feels.",
     parameters: {
       type: "object",
       properties: {
-        description: { type: "string", description: "What the patient told you, in their words" },
-        severity: { type: "string", enum: ["low", "medium", "high"] },
+        description: { type: "string", description: "Plain description of the symptom in her words" },
+        severity: {
+          type: "string",
+          enum: ["mild", "moderate", "severe", "critical"],
+          description: "Your judgment of severity from her description",
+        },
       },
       required: ["description", "severity"],
     },
@@ -44,173 +255,73 @@ export const TOOL_DECLARATIONS: ToolFunction[] = [
   {
     type: "function",
     name: "check_meds",
-    description: "Read the household's medication list and refill states.",
-    parameters: { type: "object", properties: {} },
+    description: "List the patient's medications and their current refill statuses.",
+    parameters: { type: "object", properties: {}, required: [] },
   },
   {
     type: "function",
     name: "request_refill",
-    description: "Request a refill for a named medication (mock pharmacy).",
+    description: "Request a prescription refill so she doesn't run out of a medication.",
     parameters: {
       type: "object",
-      properties: { medication_name: { type: "string" } },
-      required: ["medication_name"],
+      properties: {
+        med_name: { type: "string", description: "Medication name, e.g. Metformin" },
+      },
+      required: ["med_name"],
     },
   },
   {
     type: "function",
     name: "book_appointment",
-    description:
-      "Book one open clinic slot for the patient. Pass the slot's weekday hint like 'Tuesday'.",
+    description: "Book one of the pre-approved appointment slots with a clinic provider.",
     parameters: {
       type: "object",
-      properties: { slot_day: { type: "string", description: "e.g. 'Tuesday'" } },
-      required: ["slot_day"],
+      properties: {
+        provider: { type: "string", description: "Optional provider preference, e.g. Dr. Chen or Dr. Patel" },
+      },
+      required: [],
     },
   },
   {
     type: "function",
     name: "notify_caregiver",
-    description: "Notify the family caregiver (in-app alert). Use level=urgent for concerning findings.",
+    description: "Send a message to the patient's family caregiver — it appears on the caregiver dashboard immediately.",
     parameters: {
       type: "object",
       properties: {
-        message: { type: "string", description: "One clear sentence for the caregiver" },
-        level: { type: "string", enum: ["info", "urgent"] },
+        level: { type: "string", enum: ["info", "urgent"], description: "urgent only when it cannot wait until tomorrow" },
+        message: { type: "string", description: "Short, warm, complete summary for the family" },
       },
-      required: ["message", "level"],
+      required: ["message"],
     },
   },
   {
     type: "function",
-    name: "schedule_telephone_call",
-    description:
-      "Place Cura's outbound call to the doctor's office to book the appointment. ONLY call this if the patient already said yes to calling. Crisis calls are dispatched automatically by the system and are never requested here.",
+    name: "crisis_alert",
+    description: "EMERGENCY ONLY — top-priority alert to the caregiver plus an immediate outreach call. No patient confirmation needed.",
     parameters: {
       type: "object",
       properties: {
-        purpose: { type: "string", enum: ["clinic_booking"] },
+        concern: { type: "string", description: "Short emergency label, e.g. chest pain" },
+        message: { type: "string", description: "What she reported, briefly" },
       },
-      required: ["purpose"],
+      required: ["concern"],
     },
   },
   {
     type: "function",
-    name: "finalize_checkin",
-    description:
-      "Call ONCE at the very end of the turn with the overall grade and the kind spoken close-out. This ends the turn.",
+    name: "submit_checkin_grade",
+    description: "MANDATORY before finishing — submit your grade for how this check-in sounds overall.",
     parameters: {
       type: "object",
       properties: {
-        grade: { type: "string", enum: ["low", "medium", "high"], description: "crisis is assigned by the system only" },
-        summary_text: { type: "string", description: "What Cura says to close the check-in, short and plain" },
+        grade: {
+          type: "string",
+          enum: ["low", "medium", "high"],
+          description: "low = routine wellbeing; medium = needs a light action soon; high = needs doctor-level attention today",
+        },
       },
-      required: ["grade", "summary_text"],
+      required: ["grade"],
     },
   },
 ];
-
-export async function executeToolCall(
-  householdId: string,
-  checkinId: string,
-  name: string,
-  args: Record<string, unknown>
-): Promise<ToolExecResult> {
-  const store = getStore();
-  const hh = await store.getHousehold(householdId);
-  const hhId = hh ? householdId : DEMO_HOUSEHOLD_ID;
-  const at = () => new Date().toISOString();
-
-  const mk = async (tool: ToolName, status: ToolStatus, payload: Record<string, string | number | boolean | undefined>): Promise<ActionReceipt> =>
-    store.addAction({ checkinId, tool, status, payload });
-
-  switch (name) {
-    case "log_symptom": {
-      const description = String(args.description ?? "unspecified");
-      const severity = (args.severity === "low" || args.severity === "high" ? args.severity : "medium") as Grade;
-      const ev = await store.addSymptomEvent({ checkinId, description, severity });
-      const receipt = await mk("log_symptom", "succeeded", { description, severity });
-      return { text: `logged "${description}" (severity ${severity}, event ${ev.id})`, receipt };
-    }
-    case "check_meds": {
-      const meds = await store.getMedications(hhId);
-      const receipt = await mk("check_meds", "succeeded", { count: meds.length });
-      return {
-        text: `medications: ${meds.map((m) => medLine(m)).join("; ") || "none on file"}`,
-        receipt,
-      };
-    }
-    case "request_refill": {
-      const medName = String(args.medication_name ?? "");
-      const meds = await store.getMedications(hhId);
-      const med = meds.find((m) => m.name.toLowerCase().includes(medName.toLowerCase().split(" ")[0]));
-      let statusText: string;
-      if (med) {
-        const updated = await store.setRefillStatus(med.id, "requested");
-        statusText = `refill requested for ${updated?.name ?? med.name}`;
-      } else {
-        statusText = `no medication matching "${medName}" on file — tell the patient it needs to be added`;
-      }
-      const receipt: ActionReceipt = {
-        id: crypto.randomUUID(),
-        checkinId,
-        tool: "request_refill",
-        status: med ? "succeeded" : "failed",
-        payload: { medication_name: medName },
-        createdAt: at(),
-      };
-      if (med) {
-        const persisted = await store.addAction({
-          checkinId,
-          tool: "request_refill",
-          status: "succeeded",
-          payload: { medication_name: med.name },
-        });
-        receipt.id = persisted.id;
-      }
-      return { text: statusText, receipt };
-    }
-    case "book_appointment": {
-      const open = await store.getOpenAppointments(hhId);
-      const want = String(args.slot_day ?? "").toLowerCase();
-      const matched = want
-        ? open.find((a) => label(a.slot).toLowerCase().includes(want.slice(0, 3)))
-        : undefined;
-      const picked = matched ?? open[0] ?? null;
-      if (!picked || !picked.id) {
-        const receipt = await store.addAction({ checkinId, tool: "book_appointment", status: "failed", payload: { reason: "no open slots" } });
-        return { text: "there are no open slots right now", receipt };
-      }
-      const booked = await store.bookAppointment(picked.id, "web");
-      const receipt = booked
-        ? await store.addAction({ checkinId, tool: "book_appointment", status: "succeeded", payload: { provider: booked.provider, slot: label(booked.slot), appointment_id: booked.id } })
-        : undefined;
-      return {
-        text: booked ? `booked ${booked.provider} — ${label(booked.slot)}` : "booking failed",
-        receipt,
-      };
-    }
-    case "notify_caregiver": {
-      const message = String(args.message ?? "");
-      const level = args.level === "urgent" ? "urgent" : "info";
-      await store.createNotification({ householdId: hhId, checkinId, level, message });
-      const receipt = await store.addAction({ checkinId, tool: "notify_caregiver", status: "succeeded", payload: { message, level } });
-      return { text: `caregiver notified (${level})`, receipt };
-    }
-    case "schedule_telephone_call": {
-      const receipt = await store.addAction({ checkinId, tool: "schedule_telephone_call", status: "scheduled", payload: { purpose: "clinic_booking" } });
-      return { text: "phone call to the clinic is being placed now", receipt, wantsCall: "clinic_booking" };
-    }
-    case "finalize_checkin": {
-      const grade = (args.grade === "low" || args.grade === "medium" || args.grade === "high" ? args.grade : "medium") as Grade;
-      const summary = String(args.summary_text ?? "");
-      return { text: `check-in finalized (${grade})`, grade, summary, whole: true };
-    }
-    default:
-      return { text: `unknown tool "${name}"` };
-  }
-}
-
-function medLine(m: Medication): string {
-  return `${m.name} ${m.dosage ?? ""} (refill: ${m.refillStatus})`.trim();
-}

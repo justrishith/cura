@@ -27,9 +27,16 @@ export interface CuraStore {
   createCheckin(input: { householdId: string; grade?: Grade }): Promise<Checkin>;
   updateCheckin(
     id: string,
-    patch: { grade?: Grade; summaryText?: string; thread?: Checkin["thread"] }
+    patch: {
+      grade?: Grade;
+      summaryText?: string;
+      thread?: Checkin["thread"];
+      interactionId?: string | null;
+    }
   ): Promise<Checkin | null>;
   getCheckin(id: string): Promise<Checkin | null>;
+  /** All check-ins for a household, newest first (caregiver/summary views). */
+  getCheckinsForHousehold(householdId: string): Promise<Checkin[]>;
   addSymptomEvent(input: {
     checkinId: string;
     description: string;
@@ -43,6 +50,8 @@ export interface CuraStore {
   }): Promise<ActionReceipt>;
   getActionsForCheckin(checkinId: string): Promise<ActionReceipt[]>;
   getOpenAppointments(householdId: string): Promise<Appointment[]>;
+  /** All appointments (any status) for a household, soonest slot first (summary view). */
+  getAppointments(householdId: string): Promise<Appointment[]>;
   bookAppointment(
     appointmentId: string,
     via: "web" | "phone",
@@ -164,6 +173,12 @@ class MockStore implements CuraStore {
     return this.checkins.get(id) ?? null;
   }
 
+  async getCheckinsForHousehold(householdId: string): Promise<Checkin[]> {
+    return [...this.checkins.values()]
+      .filter((c) => c.householdId === householdId)
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  }
+
   async addSymptomEvent(input: {
     checkinId: string;
     description: string;
@@ -200,6 +215,12 @@ class MockStore implements CuraStore {
     return this.appointments.filter(
       (a) => a.householdId === householdId && a.status === "hold"
     );
+  }
+
+  async getAppointments(householdId: string): Promise<Appointment[]> {
+    return this.appointments
+      .filter((a) => a.householdId === householdId)
+      .sort((a, b) => a.slot.localeCompare(b.slot));
   }
 
   async bookAppointment(

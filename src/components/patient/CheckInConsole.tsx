@@ -63,6 +63,7 @@ export default function CheckInConsole() {
   const [draft, setDraft] = useState("");
   const [crisis, setCrisis] = useState(false);
   const [call, setCall] = useState<CallFlow | null>(null);
+  const [sessionStarted, setSessionStarted] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [callStartedAt, setCallStartedAt] = useState(0);
@@ -91,13 +92,41 @@ export default function CheckInConsole() {
       if (r.receipts.length > 0) setReceipts((prev) => [...r.receipts, ...prev]); // newest first
       if (r.crisis) setCrisis(true);
       else if (r.callOffer) setCall({ kind: "offer", offer: r.callOffer });
-      if (fromVoice || r.crisis) { setOrb("speaking"); speak(r.reply, () => setOrb("idle")); }
-      else { setOrb("idle"); }
+      // The vision: Cura's voice always answers, then a voice session rolls
+      // straight back into listening — the patient never touches the screen.
+      setOrb("speaking");
+      speak(r.reply, () => { if (sessionStarted || fromVoice) startListeningAgain(fromVoice); else setOrb("idle"); });
     } catch {
       push("cura", "I couldn't reach my notes just now — please tell me again in a moment.");
       setOrb("idle");
       setError("The check-in turn failed; Cura replied with its fallback. Please try once more.");
     }
+  }
+
+  /** Post-speech handoff: voice turns roll straight back into listening; typed turns don't. */
+  function startListeningAgain(fromVoice: boolean) {
+    if (!fromVoice || !isSupported) { setOrb("idle"); return; }
+    setOrb("listening");
+    start(
+      (nextText) => refSubmit.current(nextText, true),
+      () => setOrb((cur) => (cur === "listening" ? "idle" : cur)),
+    );
+  }
+
+  /** The one-tap session start: gesture grants the mic, Cura speaks the greeting, then listens. */
+  function beginSession() {
+    setSessionStarted(true);
+    const greeting = `Hello! I'm Cura, your daily care bird. How are you feeling today — anything bothering you?`;
+    push("cura", greeting);
+    if (!isSupported) {
+      setTextMode(true);
+      setNote("Your browser can't listen here — typing works exactly the same.");
+      setOrb("idle");
+      return;
+    }
+    setOrb("speaking");
+    // Speaks because the click is the user gesture browsers require; listens after.
+    speak(greeting, () => startListeningAgain(true));
   }
 
   // Mic callbacks go through a ref so a fresh checkinId is never captured stale.
@@ -192,13 +221,34 @@ export default function CheckInConsole() {
             </div>
           </div>
         </section>
-        <MicOrb state={orb} onToggle={onOrbToggle} onSwitchToText={() => setTextMode((v) => !v)} />
-        {feed.length === 0 ? (
-          <p className="r-sheet border border-hairline bg-paper px-4 py-3 text-lg leading-relaxed text-inkmuted">
-            Tap the circle and tell Cura how you&apos;re doing today.
-          </p>
+        {sessionStarted ? (
+          <>
+            <MicOrb state={orb} onToggle={onOrbToggle} onSwitchToText={() => setTextMode((v) => !v)} />
+            {feed.length === 0 ? (
+              <p className="r-sheet border border-hairline bg-paper px-4 py-3 text-lg leading-relaxed text-inkmuted">
+                Tap the circle and tell Cura how you&apos;re doing today.
+              </p>
+            ) : (
+              <TranscriptFeed items={feed} />
+            )}
+          </>
         ) : (
-          <TranscriptFeed items={feed} />
+          /* Pre-session: one giant, unmistakable start. The click grants the mic
+             (browser rule), Cura speaks her greeting, then it's voice-in/voice-out. */
+          <button
+            type="button"
+            onClick={beginSession}
+            className="r-ctl flex min-h-36 w-full items-center gap-4 bg-moss px-5 text-left transition-transform duration-[240ms] ease-out hover:bg-mosshover active:scale-[0.98] motion-reduce:active:scale-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand"
+          >
+            <CuraBird className="a-bob h-16 w-16 shrink-0" title="Start the check-in" />
+            <span>
+              <span className="block font-display text-2xl font-semibold text-paper">Start today&apos;s check-in</span>
+              <span className="mt-1 block text-sm text-paper/80">
+                One tap — then just talk. Cura listens and answers out loud.
+              </span>
+              <span className="mt-1 block text-xs text-paper/60">No account, no setup, nothing to remember.</span>
+            </span>
+          </button>
         )}
         {orb === "thinking" && <TranscriptThinking />}
         {orb === "listening" && interim && <p aria-live="polite" className="text-sm italic text-inkmuted/70">…{interim}</p>}

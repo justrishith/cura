@@ -170,6 +170,14 @@ export function useUserSpeech(): UserSpeech {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
     utterance.lang = "en-US";
+    // Prefer the most natural system voice installed (Windows Online Natural
+    // voices or Chrome's Google voice); fall back to the platform default.
+    const voices = window.speechSynthesis.getVoices();
+    const natural =
+      voices.find((v) => /(aria|jenny|guy).*natural/i.test(v.name)) ??
+      voices.find((v) => /google us english/i.test(v.name)) ??
+      null;
+    if (natural) utterance.voice = natural;
     if (onDone) {
       utterance.onend = () => onDone();
       utterance.onerror = () => onDone();

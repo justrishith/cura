@@ -16,7 +16,7 @@ export interface FireCallResult {
   providerSid?: string;
   reason?: string;
   /** True when the call was attempted via Url-mode (trial accounts can't pass Twiml). */
-  mode?: "twiml" | "url" | "template";
+  mode?: "twiml" | "url" | "webhook" | "template";
 }
 
 export function telephonyConfigured(): boolean {
@@ -98,7 +98,7 @@ export async function fireOutboundCall(
       ? `${publicBase}/api/telephony/turn?purpose=${encodeURIComponent(purpose)}`
       : null;
 
-    const createCall = async (mode: "twiml" | "url" | "template") => {
+    const createCall = async (mode: "twiml" | "webhook" | "template") => {
       const body =
         mode === "twiml"
           ? new URLSearchParams({
@@ -106,19 +106,20 @@ export async function fireOutboundCall(
               From: from,
               Twiml: buildOpeningTwiml(purpose, patientName, concern, turnUrl),
             })
-            : mode === "template"
-              ? // Trial-legal opening move (docs/usage/trials/try-out-voice): the call
-                // must start from one of Twilio's four hosted Voice Templates, and
-                // trial rejects StatusCallback too ("limited parameter access") —
-                // so: bare To + template Url. The template speaks its canned demo
-                // text; text override params are TBD (console Start-a-call request).
+            : mode === "webhook"
+              // Trial verdict + 2026-10-26 live test: call-create with To + our own
+              // webhook Url and NO From at all is trial-legal (201) — Cura's real
+              // words from turn one, gather loop live. Any explicit From trips
+              // 573003 ("use your assigned trial number"): the caller-ID becomes
+              // Twilio's shared number, documented as a trial limitation.
+              ? turnUrl
+                ? new URLSearchParams({ To: to, Url: turnUrl })
+                : null
+              : // Last resort (no public base): Twilio's hosted template opener.
                 new URLSearchParams({
                   To: to,
                   Url: "https://webhooks.twilio.com/v1/Voice/Template/voice_text_to_speech",
-                })
-            : turnUrl
-              ? new URLSearchParams({ To: to, From: from, Url: turnUrl })
-              : null;
+                });
       if (!body) return { status: 0, json: {} as Record<string, unknown> };
 
       const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
@@ -134,21 +135,22 @@ export async function fireOutboundCall(
 
     // Attempt 1: Twiml param (works on paid accounts; self-hosted, no public URL needed).
     let { status, json } = await createCall("twiml");
-    let mode: "twiml" | "url" | "template" = "twiml";
+    let mode: "twiml" | "webhook" | "template" = "twiml";
 
-    // Fallback 2: trial accounts reject the Twiml parameter → use the hosted
-    // template (phone rings for real; opening text is Twilio's canned demo).
+    // Attempt 2: trial accounts reject the Twiml parameter → call straight from
+    // OUR webhook (no From) so the opening words are Cura's and the gather loop
+    // runs live from the first second. Caller-ID is Twilio's shared number on trial.
+    if (status !== 200 && status !== 201 && turnUrl) {
+      const attempt = await createCall("webhook");
+      ({ status, json } = attempt);
+      mode = "webhook";
+    }
+
+    // Attempt 3: no public base available → Twilio's canned template opener.
     if (status !== 200 && status !== 201) {
       const attempt = await createCall("template");
       ({ status, json } = attempt);
       mode = "template";
-    }
-
-    // Fallback 3: own-webhook Url mode — the paid-account path for a public deploy.
-    if (status !== 200 && status !== 201 && turnUrl) {
-      const attempt = await createCall("url");
-      ({ status, json } = attempt);
-      mode = "url";
     }
 
     if (status !== 200 && status !== 201) {

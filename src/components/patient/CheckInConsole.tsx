@@ -81,14 +81,19 @@ export default function CheckInConsole() {
     setFeed((prev) => [...prev, { role, text, timestamp: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) }]);
   }
 
-  // Push-style receipts: every completed tool call arrives as a floating toast
-  // (screen-reader live region included) and stays in the side panel log.
+  // The persistent side log gets every receipt the moment it completes. Above
+  // it, only the urgent ones also surface as a floating push toast.
   const [toasts, setToasts] = useState<string[]>([]);
   const toastTimers = useRef<number[]>([]);
+  // Push-style receipts: only the moments a human must actually know about RIGHT
+  // NOW (family alerts, the phone call, crisis) interrupt as a floating toast.
+  // Quiet actions (tips, meds, symptom logs) land silently in the panel log.
+  const TOAST_WORTHY = new Set(["notify_caregiver", "schedule_telephone_call", "crisis_alert"]);
   function announceReceipts(incoming: ActionReceipt[]) {
     if (incoming.length > 0) {
-      setReceipts((prev) => [...incoming, ...prev]); // newest first
-      const ids = incoming.map((r) => r.id);
+      const urgent = incoming.filter((r) => TOAST_WORTHY.has(r.tool));
+      setReceipts((prev) => [...incoming, ...prev]); // newest first — panel gets everything at once
+      const ids = urgent.map((r) => r.id);
       setToasts((prev) => [...ids, ...prev]);
       for (const id of ids) {
         toastTimers.current.push(window.setTimeout(() => {
@@ -229,8 +234,9 @@ export default function CheckInConsole() {
     <div className="min-h-svh bg-sand">
       <CrisisBanner visible={crisis} />
 
-      {/* Push notifications: completed actions arrive as floating toasts, not a
-          pile at the bottom. They keep the bottom-of-screen space clean. */}
+      {/* Push notifications: only the urgent moments (family alerts, the phone
+          call, crisis) surface as floating toasts. Everything else lives in the
+          panel and never interrupts. */}
       {toastReceipts.length > 0 && (
         <div
           aria-live="polite"
@@ -305,8 +311,8 @@ export default function CheckInConsole() {
           {note && !textMode && <p className="text-xs text-inkmuted/80">{note}</p>}
         </main>
 
-        {/* Right column: the permanent record — receipts, call flow. Toasts above
-            announce each new row; this panel holds the full day's history. */}
+        {/* Right column: the permanent record — receipts, call flow. Only the
+            urgent ones ever interrupt as a toast; this panel holds the full day. */}
         <aside aria-label="What Cura did for you" className="flex flex-col gap-4 lg:sticky lg:top-8">
           <h2 className="font-display text-xl font-semibold text-ink">What Cura did</h2>
 
@@ -316,8 +322,8 @@ export default function CheckInConsole() {
           {call?.kind === "declined" && <p className="text-sm text-inkmuted/70">Offered to book — declined.</p>}
 
           <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
-            {/* Receipts currently showing as push toasts live up top only — the
-                panel gets them once the toast has had its moment (no dupes). */}
+            {/* Receipts mid-toast stay out of the panel for their 6.5s moment,
+                then drop in here — never on screen twice. */}
             {(() => {
               const panelReceipts = receipts.filter((r) => !toasts.includes(r.id));
               return panelReceipts.length > 0 ? (

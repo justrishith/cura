@@ -101,7 +101,13 @@ async function postGenerateContent(body: Record<string, unknown>): Promise<Recor
     const text = await res.text().catch(() => "");
     throw new Error(`Gemini generateContent ${res.status}: ${text.slice(0, 300)}`);
   }
-  const json = (await res.json()) as Record<string, unknown>;
+  const raw = await res.text().catch(() => "");
+  let json: Record<string, unknown>;
+  try {
+    json = JSON.parse(raw || "{}") as Record<string, unknown>;
+  } catch {
+    throw new Error(`Gemini generateContent: unreadable body (status ${res.status}, length ${raw.length}, head ${raw.slice(0, 200)})`);
+  }
   return json;
 }
 

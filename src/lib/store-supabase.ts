@@ -38,9 +38,12 @@ async function sb<T = unknown[]>(
   body?: unknown
 ): Promise<T> {
   const url = `${BASE}/${table}${search ? `?${search}` : ""}`;
+  // PostgREST only echoes inserted/updated/deleted rows when asked to. Without
+  // this header, POST/PATCH return 201/200 with an EMPTY body and res.json()
+  // explodes ("Unexpected end of JSON input") inside every route that inserts.
   const res = await fetch(url, {
     method,
-    headers: HEADERS(),
+    headers: method === "GET" ? HEADERS() : { ...HEADERS(), Prefer: "return=representation" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!res.ok) {
@@ -48,7 +51,15 @@ async function sb<T = unknown[]>(
     throw new Error(`Supabase ${method} ${table} → ${res.status} ${text.slice(0, 300)}`);
   }
   if (res.status === 204) return [] as T;
-  return (await res.json()) as T;
+  const text = await res.text();
+  if (text.trim() === "") {
+    throw new Error(`Supabase ${method} ${table} → ${res.status} EMPTY BODY (add Prefer: return=representation or select=*)`);
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Supabase ${method} ${table} → ${res.status} unparseable body: ${text.slice(0, 200)}`);
+  }
 }
 
 const one = <T extends Record<string, unknown>>(rows: T[]): T | null => rows[0] ?? null;
@@ -300,6 +311,16 @@ export class SupabaseStore implements CuraStore {
       "calls",
       `select=*&provider_call_sid=eq.${providerCallSid}`,
       { status, transcript }
+    );
+    return one(rows) ? rowToCall(one(rows)!) : null;
+  }
+
+  async attachProviderSid(recordId: string, providerCallSid: string): Promise<CallRecord | null> {
+    const rows = await sb<Record<string, unknown>[]>(
+      "PATCH",
+      "calls",
+      `select=*&id=eq.${recordId}`,
+      { provider_call_sid: providerCallSid }
     );
     return one(rows) ? rowToCall(one(rows)!) : null;
   }

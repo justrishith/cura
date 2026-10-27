@@ -155,7 +155,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             args: step.arguments ?? {},
             callId: step.id,
           };
-          const receipt = await executeProposedCall(call, ctx);
+          // TIER GUARD: only the deterministic regex prescreen (runCrisisPath)
+          // may fire crisis_alert + its emergency outreach call. If the model
+          // proposes crisis_alert on a NON-crisis turn, downgrade it here to an
+          // urgent caregiver notification — the emergency script must never
+          // leak from a spurious model proposal.
+          const effectiveCall: ProposedCall =
+            call.name === "crisis_alert"
+              ? {
+                  name: "notify_caregiver",
+                  args: {
+                    level: "urgent",
+                    message:
+                      String(call.args.message ?? "").trim() ||
+                      `Maria reported something that sounds serious: ${String(call.args.concern ?? "concern")}.`,
+                  },
+                  callId: call.callId,
+                }
+              : call;
+          const receipt = await executeProposedCall(effectiveCall, ctx);
           if (receipt) receipts.push(receipt);
           pendingResults.push(
             functionResultStep(call.name, call.callId ?? "", JSON.stringify(receipt ? { status: receipt.status } : { ok: true }))

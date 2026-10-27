@@ -169,6 +169,13 @@ export async function executeProposedCall(
 
     case "notify_caregiver": {
       const level = str(call.args.level) === "info" ? "info" : "urgent";
+      // idempotency: one notification per level per check-in — the model loves
+      // to double-notify inside one turn loop; duplicate rows would spammed the
+      // caregiver dashboard.
+      const existing = (await store.getActionsForCheckin(ctx.checkin.id)).find(
+        (a) => a.tool === "notify_caregiver" && (a.payload as Record<string, unknown>)["level"] === level
+      );
+      if (existing) return existing;
       const message =
         (str(call.args.message) || `${ctx.patientName} needs attention.`) +
         " To speak with Cura about her now, call (567) 405-1070.";

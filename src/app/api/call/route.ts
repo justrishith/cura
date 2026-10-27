@@ -46,6 +46,9 @@ export async function POST(req: Request) {
       simulated: !call.fired,
       callRecordId: call.recordId,
       ...(call.providerSid ? { providerCallSid: call.providerSid } : {}),
+      // "template" = trial account: Twilio plays its fixed canned notice instead
+      // of inline TwiML (documented trial limitation, see telephony.ts).
+      ...(call.mode ? { mode: call.mode } : {}),
       ...(call.reason ? { reason: call.reason } : {}),
     },
   });
@@ -53,6 +56,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     simulated: !call.fired,
     callSid: call.providerSid ?? null,
+    trialTemplate: call.fired && call.mode === "template",
     doneMessage: call.fired ? undefined : SIMULATED_DONE_MESSAGE,
   });
 }

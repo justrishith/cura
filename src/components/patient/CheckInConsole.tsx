@@ -16,6 +16,12 @@ import type { ActionReceipt, AgentTurnResult, CallOffer, Grade } from "@/lib/typ
 
 const DEMO_HOUSEHOLD_ID = "11111111-1111-1111-1111-111111111111";
 const WAIT_NOTE = "awaiting call outcome…";
+// Trial accounts: the outbound call is a fixed ~25 s recorded notice that Twilio
+// itself hangs up (inline TwiML is a paid feature). The demo reflects reality:
+// the ring is real, and the done-state says where the conversation continues.
+const TRIAL_DONE_NOTE =
+  "Call placed — the caregiver's phone got the alert call (Twilio trial line: ~25 s recorded notice). The real conversation continues right here on Cura's line.";
+const TRIAL_CALL_SECONDS = 26;
 // Elderly-first sizing: generous targets the thumb never misses.
 const INPUT_CLASS =
   "r-ctl min-h-16 w-full border border-hairline bg-paper px-4 text-lg text-ink placeholder:text-inkmuted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand";
@@ -23,7 +29,7 @@ const SEND_CLASS =
   "r-ctl min-h-16 bg-moss px-6 text-lg font-semibold text-paper transition-[background-color,transform] duration-[240ms] ease-out hover:bg-mosshover active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-sand";
 
 type CallFlow =
-  | { kind: "offer"; offer: CallOffer } | { kind: "live"; provider: string; sid: string }
+  | { kind: "offer"; offer: CallOffer } | { kind: "live"; provider: string; sid: string; trialOpener?: boolean }
   | { kind: "done"; message: string } | { kind: "declined" };
 
 /** One poll against agent D's contract. null ⇒ keep waiting (404, network, no outcome yet). */
@@ -154,19 +160,25 @@ export default function CheckInConsole() {
   // Mic callbacks go through a ref so a fresh checkinId is never captured stale.
   useEffect(() => { refSubmit.current = submit; });
 
-  // Live call: 1s ticks drive the elapsed timer; every 4th tick polls agent D's
-  // GET /api/telephony/state?sid=… → {status, outcome, bookedSlot}; 404/network keeps "live".
+  // Live call: 1s ticks drive the elapsed timer. Paid flow: every 4th tick polls
+  // GET /api/telephony/state?sid=… → {status, outcome, bookedSlot}. Trial flow
+  // (trialOpener): Twilio owns the ~25 s notice + hang-up, no state endpoint
+  // exits for it — the done-state arrives on a fixed timer instead.
   useEffect(() => {
     if (call?.kind !== "live") return;
     const sid = call.sid;
+    const trial = call.trialOpener === true;
     let n = 0;
     const id = window.setInterval(() => {
       n += 1;
-      if (n % 4 === 1) {
+      if (!trial && n % 4 === 1) {
         void telephonyOutcome(sid).then((done) => {
           if (done) { setCall({ kind: "done", message: done }); setNote(null); }
           else setNote(WAIT_NOTE);
         });
+      }
+      if (trial && n >= TRIAL_CALL_SECONDS) {
+        setCall({ kind: "done", message: TRIAL_DONE_NOTE }); setNote(null);
       }
       setTick((t) => t + 1);
     }, 1000);
@@ -192,11 +204,12 @@ export default function CheckInConsole() {
     try {
       const res = await fetch("/api/call", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purpose: "clinic_booking", householdId: DEMO_HOUSEHOLD_ID, checkinId }) });
       if (!res.ok) throw new Error(`/api/call returned ${res.status}`);
-      const data = (await res.json()) as { simulated: boolean; callSid: string | null; doneMessage?: string };
+      const data = (await res.json()) as { simulated: boolean; callSid: string | null; trialTemplate?: boolean; doneMessage?: string };
       if (data.simulated || !data.callSid) {
         setCall({ kind: "done", message: data.doneMessage ?? "Call simulated — booking continues on the dashboard." }); setNote(null);
       } else {
-        setCallStartedAt(Date.now()); setCall({ kind: "live", provider, sid: data.callSid }); setNote(WAIT_NOTE);
+        setCallStartedAt(Date.now());
+        setCall({ kind: "live", provider, sid: data.callSid, trialOpener: data.trialTemplate === true }); setNote(WAIT_NOTE);
       }
     } catch {
       setNote("The call could not be started — please try again.");

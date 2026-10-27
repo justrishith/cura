@@ -8,42 +8,46 @@ html,body{width:1280px;height:720px;overflow:hidden}
 body{background:#f5eddf;color:#29251d;font-family:"Instrument Sans",system-ui,sans-serif;position:relative}
 .grain{position:absolute;inset:0;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E")}
 .digital{font-family:"Source Serif 4",Georgia,serif}
-.blob{position:absolute;opacity:.9}
-.b1{left:-170px;bottom:-190px;width:430px;height:430px;background:#ad7d62;border-radius:58% 42% 44% 56%/46% 56% 42% 54%;transform:rotate(-10deg)}
-.b2{left:190px;bottom:-120px;width:190px;height:190px;background:#b9b28b;border-radius:52% 48% 60% 40%/44% 54% 46% 56%;transform:rotate(12deg)}
-.stage{position:relative;width:100%;height:100%;padding:64px 72px}
+.stage{position:relative;width:100%;height:100%;padding:64px 80px}
 .kicker{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:#694737}
 .kicker::before{content:"";width:34px;height:2px;background:#694737;display:inline-block}
+.line{font-size:76px;font-weight:700;line-height:1.14;letter-spacing:-.012em}
+.line .hl{background:#b9b28b;border-radius:16px;padding:2px 18px}
+.line .hl.alert{background:#ad7d62;color:#eee6d6}
+.tl{position:relative;width:1080px;height:120px}
+.tick{position:absolute;top:44px;width:5px;height:26px;background:#694737;border-radius:3px}
+.day{position:absolute;top:52px;width:7px;height:10px;background:#35422d;border-radius:3px}
+.day.bad{top:44px;width:13px;height:18px;background:#9a3b26}
+.tl .lbl{position:absolute;font-size:13px;color:#8a7a63;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.blip{position:absolute;border-radius:999px;background:#9a3b26;color:#eee6d6;font-size:13.5px;font-weight:600;padding:5px 12px;box-shadow:0 6px 14px rgba(41,37,29,.2)}
 </style></head>
 <body>
 <div class="grain"></div>
-<div class="blob b1"></div><div class="blob b2"></div>
+<div style="position:absolute;right:-150px;top:-170px;width:420px;height:420px;background:#b9b28b;border-radius:52% 48% 60% 40%/44% 54% 46% 56%;transform:rotate(13deg);opacity:.55"></div>
 
-<div class="stage" style="display:flex;flex-direction:column;gap:32px">
+<div class="stage" style="display:flex;flex-direction:column;gap:40px">
   <span class="kicker">01 — The gap</span>
 
-  <h1 class="digital" style="font-size:66px;font-weight:700;line-height:1.12;letter-spacing:-.01em;max-width:1050px">
-    Doctor visits are <span style="background:#b9b28b;border-radius:14px;padding:0 14px">monthly.</span><br>
-    Health problems are <span style="background:#ad7d62;color:#eee6d6;border-radius:14px;padding:0 14px">daily.</span>
-  </h1>
-
-  <div style="display:flex;gap:28px;max-width:1080px">
-    <div style="flex:1;background:#eee6d6;border:1px solid #d9cfb8;border-left:6px solid #35422d;border-radius:22px;padding:30px 34px;transform:rotate(-.8deg)">
-      <div class="digital" style="font-size:44px;font-weight:700;color:#35422d">2 visits / mo</div>
-      <p style="font-size:17px;color:#443b2f;margin-top:8px;line-height:1.5">What the care system actually sees. Between them: everything is on the patient to mention.</p>
-    </div>
-    <div style="flex:1;background:#eee6d6;border:1px solid #d9cfb8;border-left:6px solid #694737;border-radius:22px;padding:30px 34px;transform:rotate(.7deg)">
-      <div class="digital" style="font-size:44px;font-weight:700;color:#694737">60 sec / day</div>
-      <p style="font-size:17px;color:#443b2f;margin-top:8px;line-height:1.5">What Cura asks for. A phone call's worth of facts — no app skills, no typing, no remembering.</p>
-    </div>
-    <div style="flex:1;background:#eee6d6;border:1px solid #d9cfb8;border-left:6px solid #9a3b26;border-radius:22px;padding:30px 34px;transform:rotate(-.5deg)">
-      <div class="digital" style="font-size:44px;font-weight:700;color:#9a3b26">Days too late</div>
-      <p style="font-size:17px;color:#443b2f;margin-top:8px;line-height:1.5">When families usually find out. "You should have told me sooner" is the saddest sentence in eldercare.</p>
-    </div>
+  <div class="digital line">
+    <div>Doctor visits are <span class="hl">monthly.</span></div>
+    <div>Health problems are <span class="hl alert">daily.</span></div>
   </div>
 
-  <p class="digital" style="font-size:27px;font-style:italic;color:#35422d;max-width:900px">
-    Cura fills the gap between visits — with a daily voice check-in that decides, by grade, who gets called.
+  <!-- the gap, drawn: monthly ticks vs the daily line -->
+  <div class="tl">
+    <span class="lbl" style="left:0;top:10px">clinic ticks</span>
+    <span class="lbl" style="right:0;top:10px">what actually matters</span>
+    <div style="position:absolute;left:10px;right:10px;top:51px;height:12px;background:repeating-linear-gradient(90deg,#35422d 0 8px,transparent 8px 28px);border-radius:4px;opacity:.9"></div>
+    <span class="tick" style="left:2px"></span>
+    <span class="day bad" style="left:288px"></span>
+    <span class="blip" style="left:238px;top:2px">a bad morning</span>
+    <span class="tick" style="left:360px"></span>
+    <span class="tick" style="left:718px"></span>
+    <span class="tick" style="left:1078px"></span>
+  </div>
+
+  <p class="digital" style="font-size:30px;font-style:italic;color:#35422d;max-width:900px">
+    Cura lives in the gap between the ticks — a daily voice check-in that decides, by grade, who gets called.
   </p>
 </div>
 </body></html>

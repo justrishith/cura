@@ -8,54 +8,59 @@ html,body{width:1280px;height:720px;overflow:hidden}
 body{background:#35422d;color:#f5eddf;font-family:"Instrument Sans",system-ui,sans-serif;position:relative}
 .grain{position:absolute;inset:0;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E")}
 .digital{font-family:"Source Serif 4",Georgia,serif}
-.stage{position:relative;width:100%;height:100%;padding:64px 72px;display:flex;flex-direction:column;gap:30px}
+.stage{position:relative;width:100%;height:100%;padding:56px 72px;display:flex;gap:56px}
 .kicker{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:#b9b28b}
 .kicker::before{content:"";width:34px;height:2px;background:#b9b28b;display:inline-block}
-.card{background:#f5eddf;color:#29251d;border-radius:26px;padding:30px 30px 26px;position:relative;display:flex;flex-direction:column;gap:12px}
-.num{font-family:"Source Serif 4",Georgia,serif;font-size:64px;font-weight:700;color:#b9b28b;line-height:1}
-.tag{position:absolute;top:-16px;right:22px;background:#ad7d62;color:#eee6d6;border-radius:999px;padding:5px 14px;font-size:13px;font-weight:700;letter-spacing:.04em}
+.bub{max-width:640px;border-radius:22px;padding:20px 26px;font-size:21px;line-height:1.55;position:relative}
+.bub.cura{background:#f5eddf;color:#29251d;border-bottom-left-radius:6px}
+.bub.maria{background:#f5eddf;color:#29251d;border:1.5px solid #b9b28b;border-bottom-right-radius:6px;margin-left:64px}
+.bub .who{position:absolute;left:34px;top:-30px;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:#b9b28b;font-weight:600}
+.stamp{display:inline-flex;align-items:center;gap:8px;background:#f0e7ce;color:#8a661d;border-radius:12px;padding:10px 20px;font-weight:700;font-size:24px}
+.mini{background:#f5eddf;color:#29251d;border-radius:18px;padding:15px 20px;display:flex;gap:14px;align-items:flex-start;box-shadow:0 10px 22px rgba(15,20,12,.25)}
+.mini .ic{width:38px;height:38px;border-radius:12px;background:#e3e8d7;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.mini b{font-size:16.5px}
+.mini p{font-size:13.5px;color:#443b2f;line-height:1.4;margin-top:2px}
+.mini .ok{display:inline-block;background:#e3e8d7;color:#3f5233;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700;margin-top:6px}
 </style></head>
 <body>
 <div class="grain"></div>
 
 <div class="stage">
-  <div style="display:flex;justify-content:space-between;align-items:flex-end">
-    <div>
-      <span class="kicker">02 — How it works</span>
-      <h1 class="digital" style="font-size:56px;font-weight:700;line-height:1.1;margin-top:12px">One call's worth of facts, three jobs.</h1>
+  <!-- left: the conversation, mock but verbatim -->
+  <div style="flex:1.35;display:flex;flex-direction:column">
+    <span class="kicker">02 — One check-in</span>
+    <div style="display:flex;flex-direction:column;gap:44px;margin-top:30px">
+      <div class="bub cura"><span class="who" style="left:-10px">Cura · speaks (Gemini TTS)</span>
+        Good evening, Maria. How are you feeling today — anything bothering you?
+      </div>
+      <div class="bub maria"><span class="who" style="left:-44px">Maria · speaks</span>
+        Honestly I feel weak and a little dizzy since this morning, I nearly slipped in the bathroom.
+      </div>
+      <div style="margin-left:64px;display:flex;align-items:center;gap:18px">
+        <span class="stamp">grade: HIGH</span>
+        <p style="font-size:16.5px;line-height:1.5;color:#eee6d6;max-width:330px">One transcript → one grade → tools assemble. The server, not the model, decides what fires.</p>
+      </div>
     </div>
-    <svg width="84" height="84" viewBox="0 0 64 64" aria-hidden="true" style="transform:rotate(-8deg)">
-      <path d="M14 31 Q 3 23 0 28 Q 7 30 6 38 Q 11 37 15 40 Z" fill="#694737"/>
-      <circle cx="40" cy="22" r="10.5" fill="#eee6d6" opacity="0"/><circle cx="40" cy="22" r="10.5" fill="#f5eddf"/>
-      <ellipse cx="28" cy="35" rx="17.5" ry="14.5" fill="#f5eddf"/>
-      <ellipse cx="26" cy="36" rx="10.5" ry="7" fill="#694737" transform="rotate(-18 26 36)"/>
-      <path d="M48.5 17.5 L60 22.5 L48.5 26.5 Z" fill="#ad7d62"/>
-      <circle cx="43.5" cy="19.5" r="1.9" fill="#35422d"/>
-      <path d="M27 49 L26 56 M33 49 L34 56" stroke="#694737" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-    </svg>
+    <p class="digital" style="font-size:23px;font-style:italic;color:#eee6d6;margin-top:auto">Cura speaks her reply in a native 24&nbsp;kHz voice — never a robot.</p>
   </div>
 
-  <div style="display:flex;gap:22px;flex:1;align-items:stretch">
-    <div class="card" style="flex:1;transform:rotate(-.9deg)">
-      <span class="num" style="color:#35422d">1</span>
-      <h2 class="digital" style="font-size:29px;font-weight:700">Mom talks for 60 sec</h2>
-      <p style="font-size:16.5px;line-height:1.6;color:#443b2f">Daily voice check-in — real speech, out loud replies. No account, no setup, nothing to remember. Speech-to-text plus an elder-sized console.</p>
+  <!-- right: what a single turn stamps -->
+  <div style="flex:1;display:flex;flex-direction:column;gap:14px;justify-content:center">
+    <p style="font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#b9b28b">That turn, in receipts</p>
+    <div class="mini">
+      <span class="ic">📝</span>
+      <div><b>Symptom logged</b><p>feeling weak and dizzy · nearly slipped</p><span class="ok">✓ succeeded · log_symptom</span></div>
     </div>
-    <div class="card" style="flex:1;transform:translateY(-14px) rotate(.8deg)">
-      <span class="tag" style="background:#35422d">graded by the agent</span>
-      <span class="num">2</span>
-      <h2 class="digital" style="font-size:29px;font-weight:700">Cura grades the day</h2>
-      <p style="font-size:16.5px;line-height:1.6;color:#443b2f">A Gemini agent turn reads the words, sets a grade — low · high · crisis — and assembles tools. The server, not the model, decides what is allowed to fire.</p>
+    <div style="align-self:flex-start;color:#b9b28b;font-size:20px">↓</div>
+    <div class="mini" style="border:1.5px solid #9a3b26">
+      <span class="ic" style="background:#f2ddd2">🔔</span>
+      <div><b>Urgent alert sent to caregiver</b><p>family knows now — not next month</p><span class="ok" style="background:#f2ddd2;color:#9a3b26">✓ succeeded · notify_caregiver</span></div>
     </div>
-    <div class="card" style="flex:1;transform:rotate(-.7deg)">
-      <span class="num" style="color:#694737">3</span>
-      <h2 class="digital" style="font-size:29px;font-weight:700">Phones ring. Family watches.</h2>
-      <p style="font-size:16.5px;line-height:1.6;color:#443b2f">High grade → Cura offers to call the doctor and does — a real Twilio call. The caregiver dashboard streams check-ins, alerts and booked appointments live.</p>
+    <div style="align-self:flex-start;color:#b9b28b;font-size:20px">↓</div>
+    <div class="mini" style="border:1.5px solid #3f5233">
+      <span class="ic" style="background:#e3e8d7">📞</span>
+      <div><b>Offer: call Dr. Chen's office</b><p>consent first — then a real Twilio call</p><span class="ok">offered · schedule_telephone_call</span></div>
     </div>
   </div>
-
-  <p class="digital" style="font-size:24px;font-style:italic;color:#eee6d6">
-    Every turn is auditable: receipts stamp what happened, and the family can answer or acknowledge from anywhere.
-  </p>
 </div>
 </body></html>

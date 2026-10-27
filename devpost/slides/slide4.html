@@ -5,18 +5,32 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:1280px;height:720px;overflow:hidden}
-body{background:#eee6d6;color:#29251d;font-family:"Instrument Sans",system-ui,sans-serif;position:relative}
+body{background:#f5eddf;color:#29251d;font-family:"Instrument Sans",system-ui,sans-serif;position:relative}
 .grain{position:absolute;inset:0;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E")}
 .digital{font-family:"Source Serif 4",Georgia,serif}
-.stage{position:relative;width:100%;height:100%;padding:56px 64px;display:flex;flex-direction:column;gap:24px}
+.stage{position:relative;width:100%;height:100%;padding:56px 64px;display:flex;flex-direction:column;gap:26px}
 .kicker{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:#694737}
 .kicker::before{content:"";width:34px;height:2px;background:#694737;display:inline-block}
-.shot{background:#fff;border:1px solid #d9cfb8;border-radius:20px;overflow:hidden;box-shadow:0 14px 30px rgba(41,37,29,.14);display:flex;flex-direction:column;flex:1}
-.shot .imgwrap{flex:1;overflow:hidden;position:relative}
-.shot img{width:100%;height:100%;object-fit:cover;object-position:top}
-.cap{background:#35422d;color:#eee6d6;padding:10px 14px;font-size:14.5px;font-weight:600;display:flex;gap:8px;align-items:center}
-.cap .n{color:#b9b28b;font-family:"Source Serif 4",Georgia,serif}
-.frame{display:flex;flex-direction:column;flex:1;gap:0}
+.frame{flex:1;background:#fff;border:1px solid #d9cfb8;border-radius:20px;overflow:hidden;box-shadow:0 14px 30px rgba(41,37,29,.14);display:flex;flex-direction:column}
+.fhead{display:flex;align-items:center;gap:8px;padding:13px 18px;border-bottom:1px solid #d9cfb8;background:#faf6ec}
+.fhead b{font-size:15px;color:#35422d}
+.fhead .num{margin-left:auto;font-size:12px;color:#8a7a63;letter-spacing:.12em}
+.fbody{flex:1;padding:16px 18px;display:flex;flex-direction:column;gap:11px;background:#f5eddf}
+.cap{background:#35422d;color:#eee6d6;font-size:15.5px;line-height:1.45;padding:12px 18px;font-weight:500}
+.cap .n{font-family:"Source Serif 4",Georgia,serif;font-weight:700;color:#b9b28b;margin-right:8px}
+.card{background:#fff;border:1px solid #e2d9c4;border-radius:16px;padding:12px 14px;position:relative;border-left:4px solid #35422d}
+.card.warn{border-left-color:#9a3b26}
+.card small{display:block;color:#8a7a63;font-size:11.5px;margin-top:5px;letter-spacing:.05em}
+.card b{font-size:14.5px;display:block;line-height:1.35}
+.card p{font-size:12.5px;color:#443b2f;line-height:1.45;margin-top:4px}
+.ok{display:inline-block;background:#e3e8d7;color:#3f5233;border-radius:999px;padding:1px 8px;font-size:10.5px;font-weight:700}
+.btn{display:inline-flex;align-items:center;gap:7px;background:#35422d;color:#eee6d6;border-radius:11px;padding:8px 15px;font-size:13.5px;font-weight:700}
+.btn.ghost{background:#fff;color:#29251d;border:1px solid #d9cfb8}
+.pill{display:inline-flex;background:#f2ddd2;color:#9a3b26;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700;letter-spacing:.08em}
+.bar{height:4px;background:#e2d9c4;border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:58%;background:#35422d;border-radius:2px}
+.eq{display:flex;gap:3px;align-items:flex-end;height:22px}
+.eq i{width:4px;background:#35422d;border-radius:2px}
 </style></head>
 <body>
 <div class="grain"></div>
@@ -26,28 +40,60 @@ body{background:#eee6d6;color:#29251d;font-family:"Instrument Sans",system-ui,sa
   <div style="display:flex;justify-content:space-between;align-items:flex-end">
     <div>
       <span class="kicker">03 — The live demo moments</span>
-      <h1 class="digital" style="font-size:48px;font-weight:700;line-height:1.1;margin-top:10px">These three frames are the whole pitch.</h1>
+      <h1 class="digital" style="font-size:44px;font-weight:700;line-height:1.1;margin-top:8px">One check-in turn, three moments.</h1>
     </div>
-    <p style="font-size:15px;color:#443b2f;max-width:300px;text-align:right;line-height:1.5">Actual product captures from a single check-in turn.</p>
+    <p style="font-size:14px;color:#443b2f;max-width:270px;text-align:right;line-height:1.45">Staged from <strong>actual product surfaces</strong> — the patient console and the caregiver dashboard.</p>
   </div>
 
   <div style="display:flex;gap:22px;flex:1">
     <div class="frame">
-      <div class="shot">
-        <div class="imgwrap" style="overflow:hidden;position:relative"><img src="assets/or2-patient-high.png" alt="Patient console with stamped receipts" style="object-position:74% 0%"></div>
-        <div class="cap"><span class="n">①</span> Cura hears "weak and dizzy" — receipts stamp in, family notified</div>
+      <div class="fhead">🟢 <b>cura.</b> <span style="font-size:12.5px;color:#8a7a63">patient console</span> <span class="num">PATIENT · 8:43 PM</span></div>
+      <div class="fbody">
+        <span class="pill">• HIGH</span>
+        <div class="card">
+          <b>Symptom logged</b><p>feeling weak and dizzy, nearly slipped in bathroom</p>
+          <small><span class="ok">✓ succeeded</span> · log_symptom · 03:43</small>
+        </div>
+        <div class="card warn">
+          <b>Urgent alert sent to caregiver</b><p>Maria reported feeling weak and dizzy… <strong>call (567) 405-1070</strong></p>
+          <small><span class="ok" style="background:#f2ddd2;color:#9a3b26">✓ succeeded</span> · notify_caregiver · 03:43</small>
+        </div>
+        <div class="cap" style="border-radius:12px;font-size:13.5px">Cura hears it, acts on it — family already knows.</div>
       </div>
     </div>
+
     <div class="frame">
-      <div class="shot">
-        <div class="imgwrap" style="overflow:hidden;position:relative"><img src="assets/or2-patient-call.png" alt="Live call strip" style="object-position:100% 0%"></div>
-        <div class="cap"><span class="n">②</span> "Want me to call now?" → a real Twilio call, on the family's phone</div>
+      <div class="fhead">📞 <b>Flow state</b> <span style="font-size:12.5px;color:#8a7a63">consent → real call</span> <span class="num">TWILIO · LIVE</span></div>
+      <div class="fbody">
+        <div class="card" style="border-left-color:#3f5233">
+          <b>This needs a doctor's eyes. Want me to call Dr. Chen's office now?</b>
+          <small style="margin-top:10px"><span class="btn">☎ Call now</span>&nbsp;&nbsp;<span class="btn ghost">Not now</span></small>
+        </div>
+        <div class="card">
+          <b style="display:flex;justify-content:space-between;align-items:center">Calling Dr. Chen's office… <span style="font-size:11.5px;color:#8a7a63">00:12</span></b>
+          <div class="eq" style="margin-top:8px"><i style="height:8px"></i><i style="height:14px"></i><i style="height:20px"></i><i style="height:11px"></i><i style="height:17px"></i><i style="height:9px"></i><i style="height:15px"></i><i style="height:21px"></i><i style="height:10px"></i><i style="height:14px"></i><i style="height:18px"></i><i style="height:7px"></i></div>
+          <div class="bar" style="margin-top:10px"><i></i></div>
+          <small><span class="ok">✓ fired</span> · phone_greeted_clinic · real callSid</small>
+        </div>
+        <div class="cap" style="border-radius:12px;font-size:13.5px">One tap of consent → Cura phones a human receptionist and books it.</div>
       </div>
     </div>
+
     <div class="frame">
-      <div class="shot">
-        <div class="imgwrap"><img src="assets/or2-caregiver.png" alt="Caregiver dashboard"></div>
-        <div class="cap"><span class="n">③</span> The other side of the wall — grade, alert, acknowledge</div>
+      <div class="fhead">📋 <b>Maria, 72</b> <span style="font-size:12px;color:#8a7a63">caregiver dashboard</span> <span class="num">FAMILY · LIVE</span></div>
+      <div class="fbody">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="pill">• HIGH</span><span style="font-size:12px;color:#8a7a63">8:43 PM · today</span>
+        </div>
+        <div class="card warn">
+          <b>URGENT</b><p>Maria reported feeling weak and dizzy since this morning… To speak with Cura about her now, <strong>call (567) 405-1070</strong></p>
+          <small style="margin-top:8px"><span class="btn">Got it</span></small>
+        </div>
+        <div class="card">
+          <b>Timeline</b><p>8:43 PM · HIGH · feeling weak and dizzy</p>
+          <small><span class="ok">✓ receipts streaming live</span></small>
+        </div>
+        <div class="cap" style="border-radius:12px;font-size:13.5px">The other side of the wall: grade, alert, acknowledge.</div>
       </div>
     </div>
   </div>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1280px;height:720px;overflow:hidden}
+body{background:#eee6d6;color:#29251d;font-family:"Instrument Sans",system-ui,sans-serif;position:relative}
+.grain{position:absolute;inset:0;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E")}
+.digital{font-family:"Source Serif 4",Georgia,serif}
+.stage{position:relative;width:100%;height:100%;padding:64px 72px;display:flex;gap:48px;align-items:center}
+.stackchip{display:flex;align-items:center;gap:14px;border:1px solid #d9cfb8;background:#f5eddf;border-radius:16px;padding:13px 18px;font-size:16.5px}
+.stackchip b{color:#35422d;font-weight:700}
+.stackchip span{color:#443b2f;font-size:14.5px}
+</style></head>
+<body>
+<div class="grain"></div>
+<div style="position:absolute;right:-170px;bottom:-200px;width:460px;height:460px;background:#ad7d62;border-radius:58% 42% 44% 56%/46% 56% 42% 54%;transform:rotate(-9deg)"></div>
+<div style="position:absolute;right:270px;bottom:-90px;width:210px;height:210px;background:#b9b28b;border-radius:52% 48% 60% 40%/44% 54% 46% 56%;transform:rotate(14deg)"></div>
+
+<div class="stage">
+  <div style="display:flex;flex-direction:column;gap:22px;max-width:620px">
+    <span style="display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:#694737"><span style="width:34px;height:2px;background:#694737;display:inline-block"></span>05 — Stack &amp; freedom</span>
+    <h1 class="digital" style="font-size:50px;font-weight:700;line-height:1.14">Everything runs free.<br>Today, not in theory.</h1>
+    <div style="display:flex;flex-direction:column;gap:10px;max-width:560px">
+      <div class="stackchip"><b>Gemini</b><span>agent turn loop · tool proposals · text intake</span></div>
+      <div class="stackchip"><b>Twilio</b><span>real outbound calls, live-call UX, booked-by-voice</span></div>
+      <div class="stackchip"><b>Supabase</b><span>check-ins, receipts, alerts, appointments, call log</span></div>
+      <div class="stackchip"><b>Next.js + Web Speech</b><span>voice I/O in the browser, no native app</span></div>
+    </div>
+    <p style="font-size:16px;color:#443b2f;line-height:1.55">No free-tier asterisks anywhere: every demo moment you saw — the voice turn, the agent tools, the real phone call — costs nothing.</p>
+  </div>
+
+  <div style="flex:1;display:flex;flex-direction:column;align-items:flex-end;gap:26px">
+    <div class="digital" style="font-size:130px;font-weight:700;color:#35422d;line-height:1;text-align:right">$0<span style="font-size:36px;color:#694737">/mo</span></div>
+    <div style="background:#f5eddf;border:1px solid #d9cfb8;border-radius:22px;padding:20px 26px;transform:rotate(1.2deg);max-width:340px;box-shadow:0 12px 26px rgba(41,37,29,.12)">
+      <p style="font-size:16px;line-height:1.55;color:#443b2f"><strong style="color:#35422d">Try it now:</strong><br>cura-king4rishiths-projects.vercel.app<br><span style="color:#694737">/patient</span> say a check-in · <span style="color:#694737">/caregiver</span> watch live · <span style="color:#694737">/summary</span> print the visit sheet</p>
+    </div>
+    <svg width="96" height="96" viewBox="0 0 64 64" aria-hidden="true" style="transform:rotate(-6deg)">
+      <path d="M14 31 Q 3 23 0 28 Q 7 30 6 38 Q 11 37 15 40 Z" fill="#694737"/>
+      <circle cx="40" cy="22" r="10.5" fill="#35422d"/>
+      <ellipse cx="28" cy="35" rx="17.5" ry="14.5" fill="#35422d"/>
+      <ellipse cx="26" cy="36" rx="10.5" ry="7" fill="#694737" transform="rotate(-18 26 36)"/>
+      <path d="M48.5 17.5 L60 22.5 L48.5 26.5 Z" fill="#ad7d62"/>
+      <circle cx="43.5" cy="19.5" r="1.9" fill="#eee6d6"/>
+      <path d="M27 49 L26 56 M33 49 L34 56" stroke="#694737" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+    </svg>
+  </div>
+</div>
+</body></html>

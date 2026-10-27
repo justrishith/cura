@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1280px;height:720px;overflow:hidden}
+body{background:#f5eddf;color:#29251d;font-family:"Instrument Sans",system-ui,sans-serif;position:relative}
+.grain{position:absolute;inset:0;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E")}
+.digital{font-family:"Source Serif 4",Georgia,serif}
+.stage{position:relative;width:100%;height:100%;padding:56px 72px;display:flex;flex-direction:column;gap:22px}
+.kicker{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:#694737}
+.kicker::before{content:"";width:34px;height:2px;background:#694737;display:inline-block}
+.tier{display:flex;align-items:center;gap:20px;border:1px solid #d9cfb8;border-radius:20px;padding:16px 24px;background:#eee6d6}
+.tier .lvl{font-family:"Source Serif 4",Georgia,serif;font-weight:700;font-size:22px;border-radius:999px;padding:6px 20px;white-space:nowrap}
+.tier p{font-size:16.5px;line-height:1.5;color:#443b2f}
+</style></head>
+<body>
+<div class="grain"></div>
+<div style="position:absolute;left:-200px;top:-220px;width:340px;height:340px;background:#35422d;border-radius:46% 54% 58% 42%/52% 44% 56% 48%;transform:rotate(8deg)"></div>
+
+<div class="stage">
+  <div>
+    <span class="kicker">04 — Safety, by construction</span>
+    <h1 class="digital" style="font-size:50px;font-weight:700;line-height:1.12;margin-top:10px;max-width:1020px">
+      The model only <em style="color:#694737">proposes</em>. The server <em style="color:#35422d">enforces</em>.
+    </h1>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:1000px">
+    <div class="tier" style="border-left:6px solid #9a3b26">
+      <span class="lvl" style="background:#f2ddd2;color:#9a3b26">CRISIS</span>
+      <p><strong>Never touches the agent.</strong> A deterministic phrase screen routes chest-pain-style phrases to a scripted path: calm the user, notify family — and the agent gets no say in it.</p>
+    </div>
+    <div class="tier" style="border-left:6px solid #8a661d">
+      <span class="lvl" style="background:#f0e7ce;color:#8a661d">HIGH</span>
+      <p><strong>Family is notified, every time.</strong> Caregiver alert runs even if the model never proposes it. A model trying to fire <em>crisis_alert</em> on a non-crisis turn is downgraded — the emergency script cannot leak.</p>
+    </div>
+    <div class="tier" style="border-left:6px solid #3f5233">
+      <span class="lvl" style="background:#e3e8d7;color:#3f5233">LOW</span>
+      <p><strong>Gentle, useful.</strong> A plain-language health tip plus a graded summary the family can read — nothing urgent, nobody called.</p>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:16px;background:#35422d;color:#eee6d6;border-radius:18px;padding:16px 24px;max-width:1000px;margin-top:auto">
+    <div class="digital" style="font-size:26px;font-weight:700;color:#f0e7ce;white-space:nowrap">Cura never calls 911.</div>
+    <p style="font-size:16px;line-height:1.5;color:#d9cfb8">Not a disclaimer — an architecture rule. Escalation to emergency services is a human press, always. Demo is mocked data and clearly labeled.</p>
+  </div>
+</div>
+</body></html>

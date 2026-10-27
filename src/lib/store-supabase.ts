@@ -214,7 +214,12 @@ export class SupabaseStore implements CuraStore {
   }
 
   async addSymptomEvent(input: { checkinId: string; description: string; severity: Grade }): Promise<SymptomEvent> {
-    const rows = await sb<Record<string, unknown>[]>("POST", "symptom_events", "select=*", input);
+    const rows = await sb<Record<string, unknown>[]>(
+      "POST",
+      "symptom_events",
+      "select=*",
+      { checkin_id: input.checkinId, description: input.description, severity: input.severity }
+    );
     const r = one(rows)!;
     return { id: String(r.id), checkinId: String(r.checkin_id), description: String(r.description), severity: String(r.severity) as Grade };
   }

@@ -72,7 +72,9 @@ export async function buildPatientBrief(
   // Deduplicate learned lines
   const uniqueLines = [...new Set(learnedLines)].slice(0, 8);
 
-  // Energy trend: last 4 grades (no crisis)
+  // Energy trend: last 4 grades (no crisis). LOW = a good day (energy rising),
+  // HIGH/MEDIUM = a worrying day (energy sinking) — labels read like health,
+  // not severity counts, so a recovering week shows ↑.
   let up = 0;
   let down = 0;
   const last4 = grades.slice(0, 4);
@@ -82,9 +84,9 @@ export async function buildPatientBrief(
       continue;
     }
     if (g === "high" || g === "medium") {
-      up += 1;
-    } else if (g === "low") {
       down += 1;
+    } else if (g === "low") {
+      up += 1;
     }
   }
   let energyTrend = "flat";

@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { CaregiverSnapshot } from "@/app/api/caregiver/route";
 import { CuraMark } from "@/components/ui/CuraMark";
+import { MemoryGraph } from "@/components/caregiver/MemoryGraph";
 import { CuraBird } from "@/components/ui/CuraBird";
 import { AlertRow, StatusHero } from "@/components/ui/DashboardPrimitives";
 import { DashboardPanels, type DashboardTab } from "./DashboardPanels";
@@ -147,6 +148,10 @@ export function DashboardClient() {
               </div>
             </section>
           )}
+
+          {/* The same understanding, rendered as a place: drag the week like an
+              Obsidian graph — check-ins, their actions, and Maria at the center. */}
+          <MemoryGraph patientName={data?.patientName ?? "Maria"} checkins={data?.checkins ?? []} />
 
           <section aria-label="Alerts" className="a-drop d-2 r-panel border border-hairline bg-paper p-4">
             <h2 className="text-xs font-bold uppercase tracking-wide text-inkmuted/70">Alerts</h2>

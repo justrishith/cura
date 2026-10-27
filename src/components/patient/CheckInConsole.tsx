@@ -186,16 +186,21 @@ export default function CheckInConsole() {
     return () => window.clearInterval(id);
   }, [call]);
 
-  function onOrbToggle() {
-    if (orb === "thinking") return;
-    if (orb === "speaking") { cancelSpeech(); setOrb("idle"); return; }
-    if (orb === "listening") { stop(); return; }
-    if (!isSupported) { setTextMode(true); setNote("Voice input is not available in this browser — you can type instead."); return; }
-    setNote(null);
+  function startListening() {
+    setOrb("listening");
     start(
       (finalText) => refSubmit.current(finalText, true),
       () => setOrb((cur) => (cur === "listening" ? "idle" : cur)),
     );
+  }
+
+  function onOrbToggle() {
+    if (orb === "thinking") return;
+    if (orb === "speaking") { cancelSpeech(); startListening(); return; }
+    if (orb === "listening") { stop(); return; }
+    if (!isSupported) { setTextMode(true); setNote("Voice input is not available in this browser — you can type instead."); return; }
+    setNote(null);
+    startListening();
   }
 
   async function onCallNow() {
@@ -311,13 +316,20 @@ export default function CheckInConsole() {
           {call?.kind === "declined" && <p className="text-sm text-inkmuted/70">Offered to book — declined.</p>}
 
           <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
-            {receipts.length > 0 ? (
-              receipts.map((r, i) => <ActionCard key={r.id} receipt={r} delay={Math.min(i, 4) * 70} />)
-            ) : (
-              <p className="r-panel border border-hairline bg-paper px-4 py-3 text-sm leading-relaxed text-inkmuted">
-                Nothing yet — during your check-in, Cura&apos;s actions (symptoms logged, caregiver notified, helpful tips) appear here in real time.
-              </p>
-            )}
+            {/* Receipts currently showing as push toasts live up top only — the
+                panel gets them once the toast has had its moment (no dupes). */}
+            {(() => {
+              const panelReceipts = receipts.filter((r) => !toasts.includes(r.id));
+              return panelReceipts.length > 0 ? (
+                panelReceipts.map((r, i) => <ActionCard key={r.id} receipt={r} delay={i > 4 ? 0 : i * 70} />)
+              ) : (
+                <p className="r-panel border border-hairline bg-paper px-4 py-3 text-sm leading-relaxed text-inkmuted">
+                  {receipts.length > 0
+                    ? "New actions are announcing themselves one tap up… they settle here."
+                    : "Nothing yet — during your check-in, Cura's actions (symptoms logged, caregiver notified, helpful tips) appear here in real time."}
+                </p>
+              );
+            })()}
           </div>
         </aside>
       </div>

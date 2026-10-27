@@ -5,6 +5,10 @@
 // onDone immediately when speechSynthesis is missing. No throw paths escape the hook.
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// Spoken replies come from Gemini's native speech (Live-family voice) served by
+// /api/tts as a WAV; if that fails for any reason (no key, model unavailable,
+// autoplay policy) we degrade to the browser's Web Speech synthesis.
+
 // Minimal structural Web Speech API types — lib.dom.d.ts coverage of SpeechRecognition
 // varies by TypeScript version, so we cast window instead of relying on globals.
 interface SpeechAlternativeLike {
@@ -61,7 +65,7 @@ export interface UserSpeech {
   start(onFinal: (text: string) => void, onEnded?: () => void): void;
   /** Stop early; pending final text is still delivered via onFinal. */
   stop(): void;
-  /** Speak via speechSynthesis at rate 0.95 / en-US; onDone fires at utterance end. */
+  /** Speak via Gemini native speech (Web-Speech fallback); onDone fires when audio ends. */
   speak(text: string, onDone?: () => void): void;
   /** Cancel any queued speech immediately. */
   cancelSpeech(): void;
@@ -72,6 +76,7 @@ export function useUserSpeech(): UserSpeech {
   const [isSupported, setIsSupported] = useState(false);
   const [interim, setInterim] = useState("");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const finalRef = useRef<((text: string) => void) | null>(null);
   const endedRef = useRef<(() => void) | null>(null);
   const finalsRef = useRef<string[]>([]);
@@ -162,30 +167,68 @@ export function useUserSpeech(): UserSpeech {
   }, [deliverAndReset]);
 
   const speak = useCallback((text: string, onDone?: () => void) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      onDone?.();
-      return;
-    }
-    window.speechSynthesis.cancel(); // one voice at a time, no queue buildup
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.lang = "en-US";
-    // Prefer the most natural system voice installed (Windows Online Natural
-    // voices or Chrome's Google voice); fall back to the platform default.
-    const voices = window.speechSynthesis.getVoices();
-    const natural =
-      voices.find((v) => /(aria|jenny|guy).*natural/i.test(v.name)) ??
-      voices.find((v) => /google us english/i.test(v.name)) ??
-      null;
-    if (natural) utterance.voice = natural;
-    if (onDone) {
-      utterance.onend = () => onDone();
-      utterance.onerror = () => onDone();
-    }
-    window.speechSynthesis.speak(utterance);
+    // Fallback path — browser speechSynthesis, the pre-Gemini behavior.
+    const fallbackSpeak = () => {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+        onDone?.();
+        return;
+      }
+      window.speechSynthesis.cancel(); // one voice at a time, no queue buildup
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      utterance.lang = "en-US";
+      // Prefer the most natural system voice installed (Windows Online Natural
+      // voices or Chrome's Google voice); fall back to the platform default.
+      const voices = window.speechSynthesis.getVoices();
+      const natural =
+        voices.find((v) => /(aria|jenny|guy).*natural/i.test(v.name)) ??
+        voices.find((v) => /google us english/i.test(v.name)) ??
+        null;
+      if (natural) utterance.voice = natural;
+      if (onDone) {
+        utterance.onend = () => onDone();
+        utterance.onerror = () => onDone();
+      }
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // Primary path — Gemini native speech (~1s fetch, natural voice).
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        if (!res.ok) throw new Error(`tts ${res.status}`);
+        const url = URL.createObjectURL(await res.blob());
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        const finish = () => {
+          URL.revokeObjectURL(url);
+          if (audioRef.current === audio) audioRef.current = null;
+          if (!cancelled) onDone?.();
+        };
+        audio.onended = finish;
+        audio.onerror = finish;
+        await audio.play();
+      } catch {
+        if (!cancelled) fallbackSpeak();
+      }
+    })();
   }, []);
 
   const cancelSpeech = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      try {
+        audio.pause();
+      } catch {
+        // Ignore.
+      }
+      audioRef.current = null;
+    }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
@@ -198,6 +241,14 @@ export function useUserSpeech(): UserSpeech {
         recognitionRef.current?.abort();
       } catch {
         // Ignore.
+      }
+      const audio = audioRef.current;
+      if (audio) {
+        try {
+          audio.pause();
+        } catch {
+          // Ignore.
+        }
       }
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();

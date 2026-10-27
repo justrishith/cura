@@ -265,6 +265,15 @@ body::before {
   animation: bob 1.6s ease-in-out infinite;
 }
 
+/* --- Push toasts: receipts slide in from the right --- */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(24px) scale(0.97); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+.a-toast {
+  animation: toast-in 0.45s var(--ease-spring) both;
+}
+
 /* --- Perched mascot: gentle bob --- */
 @keyframes bob {
   0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -308,7 +317,7 @@ body::before {
     opacity: 1 !important;
     transform: none !important;
   }
-  .a-breathe, .a-ripple, .a-wobble, .a-glow, .a-eq, .a-wash, .a-ring, .a-stamp,
+  .a-breathe, .a-ripple, .a-wobble, .a-glow, .a-eq, .a-wash, .a-ring, .a-stamp, .a-toast,
   .a-think-dot, .a-chat-bird-thinking,
   .drift-a, .drift-b, .drift-c, .drift-d {
     animation: none !important;

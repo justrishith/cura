@@ -32,12 +32,13 @@ type CallFlow =
   | { kind: "offer"; offer: CallOffer } | { kind: "live"; provider: string; sid: string; trialOpener?: boolean }
   | { kind: "done"; message: string } | { kind: "declined" };
 
-/** One poll against agent D's contract. null ⇒ keep waiting (404, network, no outcome yet). */
+/** One poll of the call-state contract. null ⇒ keep waiting (404, network, not finished). */
 async function telephonyOutcome(sid: string): Promise<string | null> {
   try {
-    const res = await fetch(`/api/telephony/state?sid=${encodeURIComponent(sid)}`);
+    const res = await fetch(`/api/telephony/status?sid=${encodeURIComponent(sid)}`);
     if (!res.ok) return null;
     const s = (await res.json()) as { status?: string; outcome?: string | null; bookedSlot?: string | null };
+    if (s.status === "failed") return "The call didn't connect — please try again.";
     if (s.status !== "completed") return null;
     return s.bookedSlot ? `Booked — ${s.bookedSlot}` : `Call finished — ${s.outcome ?? "no outcome reported"}`;
   } catch { return null; }
@@ -161,9 +162,9 @@ export default function CheckInConsole() {
   useEffect(() => { refSubmit.current = submit; });
 
   // Live call: 1s ticks drive the elapsed timer. Paid flow: every 4th tick polls
-  // GET /api/telephony/state?sid=… → {status, outcome, bookedSlot}. Trial flow
-  // (trialOpener): Twilio owns the ~25 s notice + hang-up, no state endpoint
-  // exits for it — the done-state arrives on a fixed timer instead.
+  // GET /api/telephony/status?sid=… → {status, outcome, bookedSlot}. Trial flow
+  // (trialOpener): Twilio owns the ~25 s notice + hang-up and sends no callback
+  // for it — the done-state arrives on a fixed timer instead.
   useEffect(() => {
     if (call?.kind !== "live") return;
     const sid = call.sid;

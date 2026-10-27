@@ -2,8 +2,8 @@
 // [Call now] on the CallStrip offer (design.md §4-C7 / §6 consent state).
 // Always records the intent as a schedule_telephone_call receipt; the payload
 // notes whether the call was simulated (Twilio env absent / number unset).
-// Response: { simulated, callSid, doneMessage } — the exact contract CheckInConsole
-// polls against; /api/telephony/state?sid=… handles the live outcome (agent D).
+// Response: { simulated, callSid, trialTemplate, doneMessage } — the exact contract
+// CheckInConsole uses; /api/telephony/status?sid=… reports the live outcome.
 import { NextResponse } from "next/server";
 import { fireOutboundCall } from "@/lib/telephony";
 import { getStore, DEMO_HOUSEHOLD_ID } from "@/lib/store";
